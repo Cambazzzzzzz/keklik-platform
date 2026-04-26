@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İks - Sosyal Medya</title>
+    <title>Keklik - Sosyal Medya</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -12,7 +12,8 @@
     <div id="authScreen" class="auth-screen">
         <div class="auth-container">
             <div class="auth-logo">
-                <div class="iks-logo">İks</div>
+                <img src="/iks.png" alt="Keklik Logo" style="width: 100px; height: 100px; margin-bottom: 20px;">
+                <div class="keklik-logo">Keklik</div>
             </div>
             
             <div class="auth-tabs">
@@ -55,17 +56,13 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-logo">
-                <div class="iks-logo-small">İks</div>
+                <div class="keklik-logo-small">Keklik</div>
             </div>
 
             <nav class="sidebar-nav">
                 <a href="#" class="nav-item active" data-route="home">
                     <i class="fas fa-home"></i>
                     <span>Ana Sayfa</span>
-                </a>
-                <a href="#" class="nav-item" data-route="explore">
-                    <i class="fas fa-search"></i>
-                    <span>Keşfet</span>
                 </a>
                 <a href="#" class="nav-item" data-route="notifications">
                     <i class="fas fa-bell"></i>
@@ -79,6 +76,10 @@
                     <i class="fas fa-bookmark"></i>
                     <span>Yer İşaretleri</span>
                 </a>
+                <a href="#" class="nav-item" data-route="explore">
+                    <i class="fas fa-search"></i>
+                    <span>Arama</span>
+                </a>
                 <a href="#" class="nav-item" data-route="profile">
                     <i class="fas fa-user"></i>
                     <span>Profil</span>
@@ -89,13 +90,13 @@
                 </a>
             </nav>
 
-            <button class="btn-iks" id="newIksBtn">
+            <button class="btn-keklik" id="newKeklikBtn">
                 <i class="fas fa-plus"></i>
-                <span>Yeni İks</span>
+                <span>Yeni Keklik</span>
             </button>
 
             <div class="sidebar-user" id="sidebarUser">
-                <img src="https://via.placeholder.com/40" alt="Profile" class="user-avatar">
+                <img src="/iks.png" alt="Profile" class="user-avatar">
                 <div class="user-info">
                     <div class="user-name">Kullanıcı</div>
                     <div class="user-username">@kullanici</div>
@@ -114,18 +115,18 @@
                     <h1>Ana Sayfa</h1>
                 </div>
 
-                <div class="new-iks-box">
-                    <img src="https://via.placeholder.com/48" alt="Profile" class="user-avatar">
-                    <div class="new-iks-input">
-                        <textarea id="newIksText" placeholder="Ne düşünüyorsun?"></textarea>
-                        <div class="new-iks-actions">
+                <div class="new-keklik-box">
+                    <img src="/iks.png" alt="Profile" class="user-avatar">
+                    <div class="new-keklik-input">
+                        <textarea id="newKeklikText" placeholder="Ne düşünüyorsun?"></textarea>
+                        <div class="new-keklik-actions">
                             <div class="media-buttons">
                                 <label for="mediaUpload" class="media-btn">
                                     <i class="fas fa-image"></i>
                                 </label>
                                 <input type="file" id="mediaUpload" accept="image/*,video/*" style="display: none;">
                             </div>
-                            <button class="btn-post" id="postIksBtn">İksle</button>
+                            <button class="btn-post" id="postKeklikBtn">Kekle</button>
                         </div>
                         <div id="mediaPreview" class="media-preview"></div>
                     </div>
@@ -136,29 +137,16 @@
                 </div>
             </div>
 
-            <!-- Explore Page -->
+            <!-- Explore/Search Page -->
             <div id="explorePage" class="page">
                 <div class="page-header">
-                    <h1>Keşfet</h1>
+                    <h1>Arama</h1>
                 </div>
                 <div class="search-box">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="searchInput" placeholder="İks'te ara">
+                    <input type="text" id="searchInput" placeholder="Kullanıcı ara...">
                 </div>
                 <div id="searchResults" class="search-results"></div>
-                <div id="trendingContainer" class="trending-container">
-                    <h2>Trendler</h2>
-                    <div class="trend-item">
-                        <div class="trend-category">Teknoloji · Trend</div>
-                        <div class="trend-title">#YapayZeka</div>
-                        <div class="trend-count">12.5K İks</div>
-                    </div>
-                    <div class="trend-item">
-                        <div class="trend-category">Spor · Trend</div>
-                        <div class="trend-title">#Futbol</div>
-                        <div class="trend-count">8.3K İks</div>
-                    </div>
-                </div>
             </div>
 
             <!-- Messages Page -->
@@ -193,19 +181,125 @@
                 </div>
             </div>
 
-            <!-- Profile Page -->
+            <!-- User Profile Page -->
+            <div id="userProfilePage" class="page">
+                <div class="page-header">
+                    <button class="back-btn" onclick="history.back()">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div class="header-info">
+                        <h1 id="userProfileTitle">Profil</h1>
+                        <p id="userProfileSubtitle">0 Keklik</p>
+                    </div>
+                </div>
+                
+                <div class="user-profile-header">
+                    <div class="user-profile-cover" id="userProfileCover"></div>
+                    <div class="user-profile-info">
+                        <div class="user-profile-avatar-container">
+                            <img src="/iks.png" alt="Profil" class="user-profile-avatar" id="userProfileAvatar">
+                        </div>
+                        <div class="user-profile-actions">
+                            <button class="btn-edit-profile" id="editOwnProfileBtn" style="display: none;">
+                                Profili düzenle
+                            </button>
+                            <button class="btn-follow" id="followBtn" style="display: none;">Takip Et</button>
+                            <button class="btn-message" id="messageBtn" style="display: none;">
+                                <i class="fas fa-envelope"></i>
+                            </button>
+                            <div class="profile-menu" id="profileMenu">
+                                <button class="profile-menu-btn" id="profileMenuBtn">
+                                    <i class="fas fa-ellipsis-h"></i>
+                                </button>
+                                <div class="profile-menu-dropdown" id="profileMenuDropdown">
+                                    <button class="profile-menu-item" id="aboutAccountBtn">
+                                        <i class="fas fa-info-circle"></i>
+                                        Bu hesap hakkında
+                                    </button>
+                                    <button class="profile-menu-item" id="addToListBtn">
+                                        <i class="fas fa-list"></i>
+                                        Listeye ekle/çıkar
+                                    </button>
+                                    <button class="profile-menu-item" id="viewListsBtn">
+                                        <i class="fas fa-list-ul"></i>
+                                        Listeleri görüntüle
+                                    </button>
+                                    <button class="profile-menu-item" id="shareProfileBtn">
+                                        <i class="fas fa-share"></i>
+                                        @<span id="shareUsername"></span> hesabını paylaş
+                                    </button>
+                                    <button class="profile-menu-item" id="copyLinkBtn">
+                                        <i class="fas fa-link"></i>
+                                        Profil bağlantısını kopyala
+                                    </button>
+                                    <button class="profile-menu-item" id="muteUserBtn">
+                                        <i class="fas fa-volume-mute"></i>
+                                        @<span id="muteUsername"></span> hesabını sessize al
+                                    </button>
+                                    <button class="profile-menu-item danger" id="blockUserBtn">
+                                        <i class="fas fa-ban"></i>
+                                        @<span id="blockUsername"></span> hesabını engelle
+                                    </button>
+                                    <button class="profile-menu-item danger" id="reportUserBtn">
+                                        <i class="fas fa-flag"></i>
+                                        @<span id="reportUsername"></span> hesabını şikayet et
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="user-profile-details">
+                            <h1 class="user-profile-name" id="userProfileName">Kullanıcı Adı</h1>
+                            <p class="user-profile-username" id="userProfileUsername">@kullanici</p>
+                            <p class="user-profile-bio" id="userProfileBio">Bio eklenmemiş</p>
+                            <div class="user-profile-links" id="userProfileLinks">
+                                <!-- Bağlantılar buraya gelecek -->
+                            </div>
+                            <div class="user-profile-meta">
+                                <span class="profile-join-date">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span id="userJoinDate">Katılım tarihi</span>
+                                </span>
+                            </div>
+                            <div class="user-profile-stats">
+                                <span class="stat-item">
+                                    <strong id="userFollowingCount">0</strong> Takip Edilen
+                                </span>
+                                <span class="stat-item">
+                                    <strong id="userFollowersCount">0</strong> Takipçi
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="profile-tabs">
+                    <button class="profile-tab active" data-tab="posts">Keklikler</button>
+                    <button class="profile-tab" data-tab="replies">Yanıtlar</button>
+                    <button class="profile-tab" data-tab="media">Medya</button>
+                    <button class="profile-tab" data-tab="likes">Beğeniler</button>
+                </div>
+                
+                <div id="userProfilePosts" class="user-profile-content">
+                    <!-- User posts will be loaded here -->
+                </div>
+            </div>
             <div id="profilePage" class="page">
                 <div class="profile-header">
-                    <div class="profile-cover"></div>
+                    <div class="profile-cover" id="profileCover"></div>
                     <div class="profile-info">
-                        <img src="https://via.placeholder.com/120" alt="Profile" class="profile-avatar">
+                        <img src="/iks.png" alt="Profile" class="profile-avatar" id="profileAvatar">
                         <div class="profile-details">
-                            <h1 class="profile-name">Kullanıcı Adı</h1>
-                            <p class="profile-username">@kullanici</p>
-                            <p class="profile-bio">Bio buraya gelecek</p>
+                            <div class="profile-actions">
+                                <h1 class="profile-name" id="profileName">Kullanıcı Adı</h1>
+                                <button class="btn-edit-profile" id="editProfileBtn" style="display: none;">
+                                    <i class="fas fa-edit"></i> Profili Düzenle
+                                </button>
+                            </div>
+                            <p class="profile-username" id="profileUsername">@kullanici</p>
+                            <p class="profile-bio" id="profileBio">Bio buraya gelecek</p>
                             <div class="profile-stats">
-                                <span><strong>0</strong> Takip Edilen</span>
-                                <span><strong>0</strong> Takipçi</span>
+                                <span><strong id="followingCount">0</strong> Takip Edilen</span>
+                                <span><strong id="followersCount">0</strong> Takipçi</span>
                             </div>
                         </div>
                     </div>
@@ -234,6 +328,46 @@
                                 <i class="fas fa-sun"></i> Açık
                             </button>
                         </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Email Değiştir</h3>
+                            <p>Email adresinizi güncelleyin</p>
+                        </div>
+                        <button class="btn-setting" id="changeEmailBtn">
+                            <i class="fas fa-envelope"></i> Değiştir
+                        </button>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Şifre Değiştir</h3>
+                            <p>Hesap güvenliğinizi artırın</p>
+                        </div>
+                        <button class="btn-setting" id="changePasswordBtn">
+                            <i class="fas fa-lock"></i> Değiştir
+                        </button>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Kullanıcı Adı Değiştir</h3>
+                            <p id="usernameChangeInfo">2 hakkınız var (30 günde bir sıfırlanır)</p>
+                        </div>
+                        <button class="btn-setting" id="changeUsernameBtn">
+                            <i class="fas fa-user"></i> Değiştir
+                        </button>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Hesabı Sil</h3>
+                            <p>Hesabınızı kalıcı olarak silin</p>
+                        </div>
+                        <button class="btn-setting" id="deleteAccountBtn" style="background: rgba(244, 33, 46, 0.1); color: var(--danger); border-color: var(--danger);">
+                            <i class="fas fa-trash"></i> Hesabı Sil
+                        </button>
                     </div>
                 </div>
             </div>
@@ -272,7 +406,7 @@
         <aside class="right-sidebar">
             <div class="search-box-small">
                 <i class="fas fa-search"></i>
-                <input type="text" placeholder="İks'te ara">
+                <input type="text" placeholder="Keklik'te ara">
             </div>
 
             <div class="widget">
@@ -280,12 +414,12 @@
                 <div class="trend-item">
                     <div class="trend-category">Teknoloji · Trend</div>
                     <div class="trend-title">#YapayZeka</div>
-                    <div class="trend-count">12.5K İks</div>
+                    <div class="trend-count">12.5K Keklik</div>
                 </div>
                 <div class="trend-item">
                     <div class="trend-category">Gündem · Trend</div>
                     <div class="trend-title">#Haber</div>
-                    <div class="trend-count">9.2K İks</div>
+                    <div class="trend-count">9.2K Keklik</div>
                 </div>
             </div>
 
@@ -303,15 +437,15 @@
         </aside>
     </div>
 
-    <!-- New Iks Modal -->
-    <div id="newIksModal" class="modal">
+    <!-- New Keklik Modal -->
+    <div id="newKeklikModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Yeni İks</h2>
+                <h2>Yeni Keklik</h2>
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
-                <textarea id="modalIksText" placeholder="Ne düşünüyorsun?"></textarea>
+                <textarea id="modalKeklikText" placeholder="Ne düşünüyorsun?"></textarea>
                 <div id="modalMediaPreview" class="media-preview"></div>
             </div>
             <div class="modal-footer">
@@ -319,7 +453,203 @@
                     <i class="fas fa-image"></i>
                 </label>
                 <input type="file" id="modalMediaUpload" accept="image/*,video/*" style="display: none;">
-                <button class="btn-post" id="modalPostBtn">İksle</button>
+                <button class="btn-post" id="modalPostBtn">Kekle</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Edit Modal -->
+    <div id="editProfileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Profili Düzenle</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editProfileForm">
+                    <div class="form-group">
+                        <label>Görünen Ad</label>
+                        <input type="text" id="editDisplayName" placeholder="Görünen adınız">
+                    </div>
+                    <div class="form-group">
+                        <label>Bio</label>
+                        <textarea id="editBio" placeholder="Kendinizi tanıtın..." rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Web Sitesi</label>
+                        <input type="url" id="editWebsite" placeholder="https://example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Konum</label>
+                        <input type="text" id="editLocation" placeholder="Şehir, Ülke">
+                    </div>
+                    <div class="form-group">
+                        <label>Profil Fotoğrafı</label>
+                        <input type="file" id="editProfileImage" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label>Kapak Fotoğrafı</label>
+                        <input type="file" id="editCoverImage" accept="image/*">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelEditBtn">İptal</button>
+                <button class="btn-primary" id="saveProfileBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Email Modal -->
+    <div id="changeEmailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Email Değiştir</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="changeEmailForm">
+                    <div class="form-group">
+                        <label>Yeni Email</label>
+                        <input type="email" id="newEmail" placeholder="Yeni email adresiniz" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Mevcut Şifre</label>
+                        <input type="password" id="emailPassword" placeholder="Mevcut şifreniz" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelEmailBtn">İptal</button>
+                <button class="btn-primary" id="saveEmailBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Şifre Değiştir</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm">
+                    <div class="form-group">
+                        <label>Mevcut Şifre</label>
+                        <input type="password" id="currentPassword" placeholder="Mevcut şifreniz" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Yeni Şifre</label>
+                        <input type="password" id="newPassword" placeholder="Yeni şifreniz" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Yeni Şifre Tekrar</label>
+                        <input type="password" id="confirmPassword" placeholder="Yeni şifreyi tekrar girin" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelPasswordBtn">İptal</button>
+                <button class="btn-primary" id="savePasswordBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Username Modal -->
+    <div id="changeUsernameModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Kullanıcı Adı Değiştir</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="changeUsernameForm">
+                    <div class="form-group">
+                        <label>Yeni Kullanıcı Adı</label>
+                        <input type="text" id="newUsername" placeholder="Yeni kullanıcı adınız" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Şifre</label>
+                        <input type="password" id="usernamePassword" placeholder="Şifreniz" required>
+                    </div>
+                    <p class="warning-text">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Kullanıcı adınızı sadece 2 kez değiştirebilirsiniz. Sonrasında 30 gün beklemeniz gerekir.
+                    </p>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelUsernameBtn">İptal</button>
+                <button class="btn-primary" id="saveUsernameBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Account Modal -->
+    <div id="deleteAccountModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Hesabı Sil</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="deleteAccountForm">
+                    <div class="warning-text" style="margin-bottom: 20px;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Bu işlem geri alınamaz! Hesabınız, tüm keklikleriniz, mesajlarınız ve verileriniz kalıcı olarak silinecektir.
+                    </div>
+                    <div class="form-group">
+                        <label>Kullanıcı Adınızı Onaylayın</label>
+                        <input type="text" id="deleteUsername" placeholder="Kullanıcı adınızı yazın" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Şifreniz</label>
+                        <input type="password" id="deletePassword" placeholder="Şifrenizi girin" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelDeleteBtn">İptal</button>
+                <button class="btn-primary" id="confirmDeleteBtn" style="background: var(--danger);">Hesabı Sil</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Profile Modal -->
+    <div id="userProfileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalProfileName">Kullanıcı Profili</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-profile-header">
+                    <div class="modal-profile-cover" id="modalProfileCover"></div>
+                    <div class="modal-profile-info">
+                        <img src="/iks.png" alt="Profile" class="modal-profile-avatar" id="modalProfileAvatar">
+                        <div class="modal-profile-details">
+                            <h3 id="modalProfileDisplayName">Kullanıcı</h3>
+                            <p id="modalProfileUsername">@kullanici</p>
+                            <p id="modalProfileBio">Bio</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="modalUserPosts" class="modal-user-posts">
+                    <!-- User posts will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guest Access Banner -->
+    <div id="guestBanner" class="guest-banner" style="display: none;">
+        <div class="guest-content">
+            <h3>Keklik'e Hoş Geldiniz!</h3>
+            <p>Tüm özellikleri kullanmak için giriş yapın veya kayıt olun.</p>
+            <div class="guest-actions">
+                <button class="btn-primary" id="guestLoginBtn">Giriş Yap</button>
+                <button class="btn-secondary" id="guestRegisterBtn">Kayıt Ol</button>
             </div>
         </div>
     </div>

@@ -1,7 +1,7 @@
 {
   "name": "iks",
   "version": "1.0.0",
-  "description": "Modern sosyal medya platformu - İks",
+  "description": "Modern sosyal medya platformu - Keklik",
   "main": "electron.js",
   "scripts": {
     "start": "node server.js",
@@ -9,7 +9,7 @@
     "dev": "electron . --dev",
     "build": "electron-builder"
   },
-  "keywords": ["social", "media", "iks", "twitter"],
+  "keywords": ["social", "media", "keklik", "twitter"],
   "author": "",
   "license": "MIT",
   "dependencies": {
@@ -25,7 +25,7 @@
   },
   "build": {
     "appId": "com.iks.app",
-    "productName": "İks",
+    "productName": "Keklik",
     "directories": {
       "output": "dist"
     },
