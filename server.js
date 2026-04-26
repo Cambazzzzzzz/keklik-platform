@@ -149,6 +149,19 @@ function initDatabase() {
             FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )`);
+
+        // Repostlar tablosu
+        db.run(`CREATE TABLE IF NOT EXISTS reposts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            original_post_id INTEGER NOT NULL,
+            repost_type TEXT NOT NULL CHECK(repost_type IN ('repost', 'quote')),
+            quote_content TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (original_post_id) REFERENCES posts(id) ON DELETE CASCADE,
+            UNIQUE(user_id, original_post_id, repost_type)
+        )`);
     });
 }
 
@@ -535,6 +548,97 @@ app.delete('/api/posts/:id', (req, res) => {
         db.run('DELETE FROM posts WHERE id = ?', [post_id], (err) => {
             if (err) return res.status(500).json({ error: 'Keklik silinemedi' });
             res.json({ success: true });
+        });
+    });
+});
+
+// REPOST ROUTES
+// Repost (paylaş)
+app.post('/api/posts/:id/repost', (req, res) => {
+    const { user_id } = req.body;
+    const post_id = req.params.id;
+    
+    db.run('INSERT INTO reposts (user_id, original_post_id, repost_type) VALUES (?, ?, ?)', 
+        [user_id, post_id, 'repost'], (err) => {
+        if (err) {
+            if (err.message.includes('UNIQUE')) {
+                // Unrepost
+                db.run('DELETE FROM reposts WHERE user_id = ? AND original_post_id = ? AND repost_type = ?', 
+                    [user_id, post_id, 'repost'], (err) => {
+                    if (err) return res.status(500).json({ error: 'Repost kaldırılamadı' });
+                    res.json({ success: true, action: 'unreposted' });
+                });
+            } else {
+                return res.status(500).json({ error: 'Repost yapılamadı' });
+            }
+        } else {
+            res.json({ success: true, action: 'reposted' });
+        }
+    });
+});
+
+// Quote (alıntı ile paylaş)
+app.post('/api/posts/:id/quote', (req, res) => {
+    const { user_id, content } = req.body;
+    const post_id = req.params.id;
+    
+    if (!content || !content.trim()) {
+        return res.status(400).json({ error: 'Alıntı içeriği boş olamaz' });
+    }
+    
+    db.run('INSERT INTO reposts (user_id, original_post_id, repost_type, quote_content) VALUES (?, ?, ?, ?)', 
+        [user_id, post_id, 'quote', content], function(err) {
+        if (err) return res.status(500).json({ error: 'Alıntı yapılamadı' });
+        res.json({ success: true, quoteId: this.lastID });
+    });
+});
+
+// Get reposts for a user
+app.get('/api/reposts/:user_id', (req, res) => {
+    const user_id = req.params.user_id;
+    
+    const query = `
+        SELECT r.*, r.created_at as repost_date,
+        p.*, p.created_at as original_date,
+        u.username as original_username, u.display_name as original_display_name, u.profile_image as original_profile_image,
+        ru.username as reposter_username, ru.display_name as reposter_display_name, ru.profile_image as reposter_profile_image,
+        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
+        (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as replies,
+        (SELECT COUNT(*) FROM reposts WHERE original_post_id = p.id) as retweets
+        FROM reposts r
+        JOIN posts p ON r.original_post_id = p.id
+        JOIN users u ON p.user_id = u.id
+        JOIN users ru ON r.user_id = ru.id
+        WHERE r.user_id = ?
+        ORDER BY r.created_at DESC
+    `;
+    
+    db.all(query, [user_id], (err, reposts) => {
+        if (err) return res.status(500).json({ error: 'Repostlar yüklenemedi' });
+        res.json(reposts);
+    });
+});
+
+// Get repost count for a post
+app.get('/api/posts/:id/repost-count', (req, res) => {
+    const post_id = req.params.id;
+    
+    db.get('SELECT COUNT(*) as count FROM reposts WHERE original_post_id = ?', [post_id], (err, result) => {
+        if (err) return res.status(500).json({ error: 'Repost sayısı alınamadı' });
+        res.json({ count: result.count });
+    });
+});
+
+// Check if user reposted
+app.get('/api/posts/:id/repost-status/:user_id', (req, res) => {
+    const { id, user_id } = req.params;
+    
+    db.get('SELECT repost_type FROM reposts WHERE user_id = ? AND original_post_id = ?', 
+        [user_id, id], (err, repost) => {
+        if (err) return res.status(500).json({ error: 'Repost durumu kontrol edilemedi' });
+        res.json({ 
+            isReposted: !!repost,
+            repostType: repost ? repost.repost_type : null
         });
     });
 });

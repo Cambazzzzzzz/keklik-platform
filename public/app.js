@@ -287,26 +287,7 @@ function logout() {
 }
 
 // Navigation
-function navigateTo(route) {
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    document.querySelector(`[data-route="${route}"]`).classList.add('active');
-    
-    document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-    document.getElementById(route + 'Page').classList.add('active');
-
-    // Load page specific data
-    switch(route) {
-        case 'home':
-            loadFeed();
-            break;
-        case 'messages':
-            loadConversations();
-            break;
-        case 'profile':
-            loadUserProfile();
-            break;
-    }
-}
+// Navigation (removed duplicate - using the one below)
 
 // Load user data
 function loadUserData() {
@@ -409,7 +390,7 @@ function createPostElement(post) {
                     <i class="far fa-comment"></i>
                     <span>${post.replies || 0}</span>
                 </button>
-                <button class="post-action">
+                <button class="post-action repost-btn" data-post-id="${post.id}">
                     <i class="fas fa-retweet"></i>
                     <span>${post.retweets || 0}</span>
                 </button>
@@ -441,6 +422,12 @@ function createPostElement(post) {
     postDiv.querySelector('.comment-btn').addEventListener('click', (e) => {
         e.stopPropagation();
         toggleComments(post.id);
+    });
+
+    // Repost button handler
+    postDiv.querySelector('.repost-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        showRepostMenu(post.id, e.currentTarget);
     });
 
     return postDiv;
@@ -958,6 +945,8 @@ function openEditProfileModal() {
     
     document.getElementById('editDisplayName').value = currentUser.display_name || '';
     document.getElementById('editBio').value = currentUser.bio || '';
+    document.getElementById('editWebsite').value = currentUser.website || '';
+    document.getElementById('editLocation').value = currentUser.location || '';
     document.getElementById('editProfileModal').classList.add('active');
 }
 
@@ -967,11 +956,15 @@ async function saveProfile() {
     const formData = new FormData();
     const displayName = document.getElementById('editDisplayName').value;
     const bio = document.getElementById('editBio').value;
+    const website = document.getElementById('editWebsite').value;
+    const location = document.getElementById('editLocation').value;
     const profileImage = document.getElementById('editProfileImage').files[0];
     const coverImage = document.getElementById('editCoverImage').files[0];
     
     if (displayName) formData.append('display_name', displayName);
     if (bio !== undefined) formData.append('bio', bio);
+    if (website !== undefined) formData.append('website', website);
+    if (location !== undefined) formData.append('location', location);
     if (profileImage) formData.append('profile_image', profileImage);
     if (coverImage) formData.append('cover_image', coverImage);
     
@@ -985,11 +978,45 @@ async function saveProfile() {
         if (data.success) {
             showNotification('Profil başarıyla güncellendi!', 'success');
             document.getElementById('editProfileModal').classList.remove('active');
+            
+            // Kullanıcı bilgilerini yeniden yükle
+            const userResponse = await fetch(`/api/user/${currentUser.id}`);
+            const updatedUser = await userResponse.json();
+            
+            // LocalStorage'ı güncelle - TÜM alanları güncelle
+            currentUser = {
+                ...currentUser,
+                display_name: updatedUser.display_name,
+                bio: updatedUser.bio,
+                website: updatedUser.website,
+                location: updatedUser.location,
+                profile_image: updatedUser.profile_image,
+                cover_image: updatedUser.cover_image
+            };
+            localStorage.setItem('iksUser', JSON.stringify(currentUser));
+            
+            // UI'ı güncelle
             loadUserData();
+            
+            // Eğer profil sayfasındaysak yenile
+            if (document.getElementById('profilePage').classList.contains('active')) {
+                loadUserProfile();
+            }
+            
+            // Eğer user profile sayfasındaysak yenile
+            if (document.getElementById('userProfilePage').classList.contains('active')) {
+                loadUserProfilePage(currentUser.username);
+            }
+            
+            // Feed'i yenile (profil resmi güncellenmiş olabilir)
+            if (document.getElementById('homePage').classList.contains('active')) {
+                loadFeed();
+            }
         } else {
             showNotification(data.error || 'Profil güncellenemedi', 'error');
         }
     } catch (error) {
+        console.error('Profile update error:', error);
         showNotification('Bir hata oluştu', 'error');
     }
 }
@@ -1561,14 +1588,18 @@ function navigateTo(route, param = null) {
         }
     }
     
-    // Update URL without page reload
+    // Update URL without page reload - use replaceState to avoid adding to history
     let newUrl;
     if (route === 'userProfile' && param) {
         newUrl = `/${param}`;
     } else {
         newUrl = route === 'home' ? '/' : `/${route}`;
     }
-    window.history.pushState({route, param}, '', newUrl);
+    
+    // Only update URL if it's different from current URL
+    if (window.location.pathname !== newUrl) {
+        window.history.replaceState({route, param}, '', newUrl);
+    }
 }
 
 // Load user profile page
@@ -2423,5 +2454,206 @@ async function likePost(postId) {
         }
     } catch (error) {
         console.error('Like error:', error);
+    }
+}
+
+
+// Repost Functions
+let currentRepostPostId = null;
+let currentRepostButton = null;
+
+function showRepostMenu(postId, button) {
+    if (!currentUser) {
+        showNotification('Repost yapmak için giriş yapın', 'error');
+        return;
+    }
+    
+    currentRepostPostId = postId;
+    currentRepostButton = button;
+    
+    const menu = document.getElementById('repostMenuModal');
+    const rect = button.getBoundingClientRect();
+    
+    menu.style.display = 'block';
+    menu.style.left = rect.left + 'px';
+    menu.style.top = (rect.bottom + 5) + 'px';
+    
+    // Close menu when clicking outside
+    setTimeout(() => {
+        document.addEventListener('click', closeRepostMenuOnClickOutside);
+    }, 100);
+}
+
+function closeRepostMenuOnClickOutside(e) {
+    const menu = document.getElementById('repostMenuModal');
+    if (!menu.contains(e.target) && !e.target.closest('.repost-btn')) {
+        closeRepostMenu();
+    }
+}
+
+function closeRepostMenu() {
+    const menu = document.getElementById('repostMenuModal');
+    menu.style.display = 'none';
+    document.removeEventListener('click', closeRepostMenuOnClickOutside);
+}
+
+async function doRepost() {
+    if (!currentUser || !currentRepostPostId) return;
+    
+    closeRepostMenu();
+    
+    try {
+        const response = await fetch(`/api/posts/${currentRepostPostId}/repost`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: currentUser.id })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.action === 'reposted') {
+                showNotification('Keklik repost edildi!', 'success');
+                if (currentRepostButton) {
+                    currentRepostButton.classList.add('reposted');
+                    const count = currentRepostButton.querySelector('span');
+                    count.textContent = parseInt(count.textContent) + 1;
+                }
+            } else {
+                showNotification('Repost kaldırıldı', 'success');
+                if (currentRepostButton) {
+                    currentRepostButton.classList.remove('reposted');
+                    const count = currentRepostButton.querySelector('span');
+                    count.textContent = Math.max(0, parseInt(count.textContent) - 1);
+                }
+            }
+            loadTrendingPosts();
+        } else {
+            showNotification(data.error || 'Repost yapılamadı', 'error');
+        }
+    } catch (error) {
+        showNotification('Bir hata oluştu', 'error');
+    }
+}
+
+async function openQuoteModal() {
+    if (!currentUser || !currentRepostPostId) return;
+    
+    closeRepostMenu();
+    
+    try {
+        // Get post details
+        const response = await fetch(`/api/posts`);
+        const posts = await response.json();
+        const post = posts.find(p => p.id === currentRepostPostId);
+        
+        if (!post) {
+            showNotification('Keklik bulunamadı', 'error');
+            return;
+        }
+        
+        // Show modal
+        const modal = document.getElementById('quoteModal');
+        const quotedPost = document.getElementById('quotedPost');
+        
+        quotedPost.innerHTML = `
+            <div class="quoted-post-header">
+                <img src="${post.profile_image || '/iks.png'}" alt="${post.display_name}" class="quoted-post-avatar">
+                <div class="quoted-post-user">
+                    <div class="quoted-post-name">${post.display_name}</div>
+                    <div class="quoted-post-username">@${post.username}</div>
+                </div>
+            </div>
+            <div class="quoted-post-content">${formatPostText(post.content)}</div>
+            ${post.media_url ? `
+                <div class="quote-post-media">
+                    ${post.media_type === 'video' ? 
+                        `<video><source src="${post.media_url}" type="video/mp4"></video>` :
+                        `<img src="${post.media_url}" alt="Media">`
+                    }
+                </div>
+            ` : ''}
+        `;
+        
+        modal.classList.add('active');
+        document.getElementById('quoteText').value = '';
+        document.getElementById('quoteText').focus();
+        
+    } catch (error) {
+        showNotification('Bir hata oluştu', 'error');
+    }
+}
+
+function closeQuoteModal() {
+    const modal = document.getElementById('quoteModal');
+    modal.classList.remove('active');
+    document.getElementById('quoteText').value = '';
+}
+
+// Post quote button handler
+document.getElementById('postQuoteBtn')?.addEventListener('click', async () => {
+    const content = document.getElementById('quoteText').value.trim();
+    
+    if (!content) {
+        showNotification('Yorum ekleyin', 'error');
+        return;
+    }
+    
+    if (!currentUser || !currentRepostPostId) return;
+    
+    try {
+        const response = await fetch(`/api/posts/${currentRepostPostId}/quote`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: currentUser.id,
+                content: content
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Alıntı paylaşıldı!', 'success');
+            closeQuoteModal();
+            loadFeed();
+            loadTrendingPosts();
+        } else {
+            showNotification(data.error || 'Alıntı paylaşılamadı', 'error');
+        }
+    } catch (error) {
+        showNotification('Bir hata oluştu', 'error');
+    }
+});
+
+// Load reposts for user profile
+async function loadUserReposts(userId) {
+    try {
+        const response = await fetch(`/api/reposts/${userId}`);
+        const reposts = await response.json();
+        
+        return reposts;
+    } catch (error) {
+        console.error('Error loading reposts:', error);
+        return [];
+    }
+}
+
+// Check repost status for posts
+async function checkRepostStatus(postId) {
+    if (!currentUser) return;
+    
+    try {
+        const response = await fetch(`/api/posts/${postId}/repost-status/${currentUser.id}`);
+        const data = await response.json();
+        
+        if (data.isReposted) {
+            const repostBtn = document.querySelector(`[data-post-id="${postId}"].repost-btn`);
+            if (repostBtn) {
+                repostBtn.classList.add('reposted');
+            }
+        }
+    } catch (error) {
+        console.error('Error checking repost status:', error);
     }
 }

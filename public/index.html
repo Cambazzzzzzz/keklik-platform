@@ -623,6 +623,40 @@
         </div>
     </div>
 
+    <!-- Repost Menu Modal -->
+    <div id="repostMenuModal" class="repost-menu-modal" style="display: none;">
+        <div class="repost-menu-content">
+            <button class="repost-menu-item" onclick="doRepost()">
+                <i class="fas fa-retweet"></i>
+                <span>Repost</span>
+            </button>
+            <button class="repost-menu-item" onclick="openQuoteModal()">
+                <i class="fas fa-pen"></i>
+                <span>Alıntı ile Paylaş</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Quote Modal -->
+    <div id="quoteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Alıntı ile Paylaş</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <textarea id="quoteText" placeholder="Yorumunu ekle..." rows="4"></textarea>
+                <div id="quotedPost" class="quoted-post-preview">
+                    <!-- Original post will be shown here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeQuoteModal()">İptal</button>
+                <button class="btn-primary" id="postQuoteBtn">Paylaş</button>
+            </div>
+        </div>
+    </div>
+
     <!-- User Profile Modal -->
     <div id="userProfileModal" class="modal">
         <div class="modal-content">
