@@ -423,7 +423,29 @@ app.get('/api/posts/public', (req, res) => {
     `;
     
     db.all(query, (err, posts) => {
-        if (err) return res.status(500).json({ error: 'İksler yüklenemedi' });
+        if (err) return res.status(500).json({ error: 'Keklikler yüklenemedi' });
+        res.json(posts);
+    });
+});
+
+// Trending posts - en çok beğenilen ve yorumlanan
+app.get('/api/posts/trending', (req, res) => {
+    const query = `
+        SELECT p.*, u.username, u.display_name, u.profile_image,
+        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
+        (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as replies,
+        (SELECT COUNT(*) FROM posts WHERE id = p.id) as retweets,
+        ((SELECT COUNT(*) FROM likes WHERE post_id = p.id) * 2 + 
+         (SELECT COUNT(*) FROM comments WHERE post_id = p.id) * 3) as trend_score
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE datetime(p.created_at) > datetime('now', '-7 days')
+        ORDER BY trend_score DESC, p.created_at DESC
+        LIMIT 10
+    `;
+    
+    db.all(query, (err, posts) => {
+        if (err) return res.status(500).json({ error: 'Trend keklikler yüklenemedi' });
         res.json(posts);
     });
 });

@@ -396,9 +396,10 @@ function createPostElement(post) {
             </div>
             <div class="post-text">${processedContent}</div>
             ${post.media_url ? `
-                <div class="post-media">
+                <div class="post-media" onclick="openMedia('${post.media_url}', '${post.media_type}')">
                     ${post.media_type === 'video' 
-                        ? `<video controls><source src="${post.media_url}" type="video/mp4"></video>`
+                        ? `<video><source src="${post.media_url}" type="video/mp4"></video>
+                           <div class="video-play-overlay"><i class="fas fa-play"></i></div>`
                         : `<img src="${post.media_url}" alt="Post media">`
                     }
                 </div>
@@ -2108,3 +2109,319 @@ async function saveProfileUpdated() {
 // Override existing functions
 window.openEditProfileModal = openEditProfileModalUpdated;
 window.saveProfile = saveProfileUpdated;
+
+
+// Media Viewer Functions
+function openMedia(url, type) {
+    if (type === 'video') {
+        openVideoPlayer(url);
+    } else {
+        openLightbox(url);
+    }
+}
+
+// Image Lightbox
+function openLightbox(imageUrl) {
+    const lightbox = document.getElementById('imageLightbox');
+    const lightboxImage = document.getElementById('lightboxImage');
+    
+    lightboxImage.src = imageUrl;
+    lightbox.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    
+    // Add keyboard support
+    document.addEventListener('keydown', handleLightboxKeyboard);
+}
+
+function closeLightbox() {
+    const lightbox = document.getElementById('imageLightbox');
+    lightbox.style.display = 'none';
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', handleLightboxKeyboard);
+}
+
+function handleLightboxKeyboard(e) {
+    if (e.key === 'Escape') {
+        closeLightbox();
+    }
+}
+
+function downloadImage() {
+    const imageUrl = document.getElementById('lightboxImage').src;
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = 'keklik-image-' + Date.now() + '.jpg';
+    link.click();
+}
+
+// Video Player
+let currentVideo = null;
+
+function openVideoPlayer(videoUrl) {
+    const modal = document.getElementById('videoPlayerModal');
+    const video = document.getElementById('modalVideo');
+    
+    video.querySelector('source').src = videoUrl;
+    video.load();
+    currentVideo = video;
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    
+    // Setup video events
+    video.addEventListener('loadedmetadata', updateVideoDuration);
+    video.addEventListener('timeupdate', updateVideoProgress);
+    video.addEventListener('ended', onVideoEnded);
+    
+    // Add keyboard support
+    document.addEventListener('keydown', handleVideoKeyboard);
+    
+    // Auto play
+    video.play();
+    updatePlayPauseIcon();
+}
+
+function closeVideoPlayer() {
+    const modal = document.getElementById('videoPlayerModal');
+    const video = document.getElementById('modalVideo');
+    
+    video.pause();
+    video.currentTime = 0;
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    currentVideo = null;
+    
+    document.removeEventListener('keydown', handleVideoKeyboard);
+}
+
+function togglePlay() {
+    if (!currentVideo) return;
+    
+    if (currentVideo.paused) {
+        currentVideo.play();
+    } else {
+        currentVideo.pause();
+    }
+    updatePlayPauseIcon();
+}
+
+function updatePlayPauseIcon() {
+    const icon = document.getElementById('playPauseIcon');
+    if (currentVideo && !currentVideo.paused) {
+        icon.className = 'fas fa-pause';
+    } else {
+        icon.className = 'fas fa-play';
+    }
+}
+
+function toggleMute() {
+    if (!currentVideo) return;
+    
+    currentVideo.muted = !currentVideo.muted;
+    updateVolumeIcon();
+    document.getElementById('volumeSlider').value = currentVideo.muted ? 0 : currentVideo.volume * 100;
+}
+
+function updateVolumeIcon() {
+    const icon = document.getElementById('volumeIcon');
+    if (currentVideo.muted || currentVideo.volume === 0) {
+        icon.className = 'fas fa-volume-mute';
+    } else if (currentVideo.volume < 0.5) {
+        icon.className = 'fas fa-volume-down';
+    } else {
+        icon.className = 'fas fa-volume-up';
+    }
+}
+
+function changeVolume(value) {
+    if (!currentVideo) return;
+    
+    currentVideo.volume = value / 100;
+    currentVideo.muted = false;
+    updateVolumeIcon();
+}
+
+function changeSpeed(speed) {
+    if (!currentVideo) return;
+    currentVideo.playbackRate = parseFloat(speed);
+}
+
+function toggleFullscreen() {
+    if (!currentVideo) return;
+    
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+    } else {
+        currentVideo.requestFullscreen();
+    }
+}
+
+function updateVideoDuration() {
+    if (!currentVideo) return;
+    
+    const duration = formatTime(currentVideo.duration);
+    document.getElementById('duration').textContent = duration;
+}
+
+function updateVideoProgress() {
+    if (!currentVideo) return;
+    
+    const progress = (currentVideo.currentTime / currentVideo.duration) * 100;
+    document.getElementById('videoProgress').style.width = progress + '%';
+    document.getElementById('currentTime').textContent = formatTime(currentVideo.currentTime);
+}
+
+function onVideoEnded() {
+    updatePlayPauseIcon();
+}
+
+function formatTime(seconds) {
+    if (isNaN(seconds)) return '0:00';
+    
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function handleVideoKeyboard(e) {
+    if (!currentVideo) return;
+    
+    switch(e.key) {
+        case 'Escape':
+            closeVideoPlayer();
+            break;
+        case ' ':
+            e.preventDefault();
+            togglePlay();
+            break;
+        case 'ArrowLeft':
+            currentVideo.currentTime = Math.max(0, currentVideo.currentTime - 5);
+            break;
+        case 'ArrowRight':
+            currentVideo.currentTime = Math.min(currentVideo.duration, currentVideo.currentTime + 5);
+            break;
+        case 'ArrowUp':
+            e.preventDefault();
+            currentVideo.volume = Math.min(1, currentVideo.volume + 0.1);
+            document.getElementById('volumeSlider').value = currentVideo.volume * 100;
+            updateVolumeIcon();
+            break;
+        case 'ArrowDown':
+            e.preventDefault();
+            currentVideo.volume = Math.max(0, currentVideo.volume - 0.1);
+            document.getElementById('volumeSlider').value = currentVideo.volume * 100;
+            updateVolumeIcon();
+            break;
+        case 'f':
+            toggleFullscreen();
+            break;
+        case 'm':
+            toggleMute();
+            break;
+    }
+}
+
+// Progress bar click
+document.addEventListener('DOMContentLoaded', () => {
+    const progressBar = document.querySelector('.video-progress-bar');
+    if (progressBar) {
+        progressBar.addEventListener('click', (e) => {
+            if (!currentVideo) return;
+            
+            const rect = progressBar.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            currentVideo.currentTime = pos * currentVideo.duration;
+        });
+    }
+});
+
+// Load Trending Posts
+async function loadTrendingPosts() {
+    try {
+        const response = await fetch('/api/posts/trending');
+        const posts = await response.json();
+        
+        const container = document.getElementById('trendingPosts');
+        if (!container) return;
+        
+        if (posts.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px; text-align: center;">Henüz trend keklik yok</p>';
+            return;
+        }
+        
+        container.innerHTML = posts.slice(0, 5).map(post => `
+            <div class="trending-post-item" onclick="openUserProfile('${post.username}')">
+                <div class="trending-post-header">
+                    <img src="${post.profile_image || '/iks.png'}" alt="${post.display_name}" class="trending-post-avatar">
+                    <div class="trending-post-user">
+                        <div class="trending-post-name">${post.display_name}</div>
+                        <div class="trending-post-username">@${post.username}</div>
+                    </div>
+                </div>
+                <div class="trending-post-content">${formatPostText(post.content)}</div>
+                <div class="trending-post-stats">
+                    <span class="trending-post-stat">
+                        <i class="fas fa-heart"></i> ${post.likes || 0}
+                    </span>
+                    <span class="trending-post-stat">
+                        <i class="fas fa-comment"></i> ${post.replies || 0}
+                    </span>
+                    <span class="trending-post-stat">
+                        <i class="fas fa-retweet"></i> ${post.retweets || 0}
+                    </span>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading trending posts:', error);
+    }
+}
+
+// Load trending posts on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadTrendingPosts();
+    // Refresh trending posts every 5 minutes
+    setInterval(loadTrendingPosts, 5 * 60 * 1000);
+});
+
+// Update like button to show red color
+async function likePost(postId) {
+    if (!currentUser) {
+        showNotification('Beğenmek için giriş yapın', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/posts/${postId}/like`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: currentUser.id })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update UI
+            const likeBtn = document.querySelector(`[data-post-id="${postId}"].like-btn`);
+            if (likeBtn) {
+                if (data.action === 'liked') {
+                    likeBtn.classList.add('liked');
+                    likeBtn.querySelector('i').className = 'fas fa-heart';
+                } else {
+                    likeBtn.classList.remove('liked');
+                    likeBtn.querySelector('i').className = 'far fa-heart';
+                }
+                
+                // Update like count
+                const likeCount = likeBtn.querySelector('span');
+                const currentCount = parseInt(likeCount.textContent) || 0;
+                likeCount.textContent = data.action === 'liked' ? currentCount + 1 : Math.max(0, currentCount - 1);
+            }
+            
+            // Reload trending posts
+            loadTrendingPosts();
+        }
+    } catch (error) {
+        console.error('Like error:', error);
+    }
+}

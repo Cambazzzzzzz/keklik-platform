@@ -424,6 +424,13 @@
             </div>
 
             <div class="widget">
+                <h2>Popüler Keklikler</h2>
+                <div id="trendingPosts" class="trending-posts">
+                    <!-- Trending posts will be loaded here -->
+                </div>
+            </div>
+
+            <div class="widget">
                 <h2>Kimi takip etmeli</h2>
                 <div class="user-suggestion">
                     <img src="https://via.placeholder.com/40" alt="User" class="user-avatar">
@@ -650,6 +657,65 @@
             <div class="guest-actions">
                 <button class="btn-primary" id="guestLoginBtn">Giriş Yap</button>
                 <button class="btn-secondary" id="guestRegisterBtn">Kayıt Ol</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Lightbox -->
+    <div id="imageLightbox" class="lightbox" style="display: none;">
+        <div class="lightbox-overlay" onclick="closeLightbox()"></div>
+        <div class="lightbox-content">
+            <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+            <img id="lightboxImage" src="" alt="Büyütülmüş görsel">
+            <div class="lightbox-controls">
+                <button class="lightbox-btn" onclick="downloadImage()">
+                    <i class="fas fa-download"></i> İndir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video Player Modal -->
+    <div id="videoPlayerModal" class="modal video-modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeVideoPlayer()"></div>
+        <div class="video-modal-content">
+            <button class="modal-close" onclick="closeVideoPlayer()">&times;</button>
+            <video id="modalVideo" controls controlsList="nodownload">
+                <source src="" type="video/mp4">
+            </video>
+            <div class="video-controls-custom">
+                <div class="video-progress-bar">
+                    <div class="video-progress" id="videoProgress"></div>
+                </div>
+                <div class="video-controls-bottom">
+                    <button class="video-btn" onclick="togglePlay()">
+                        <i class="fas fa-play" id="playPauseIcon"></i>
+                    </button>
+                    <span class="video-time">
+                        <span id="currentTime">0:00</span> / <span id="duration">0:00</span>
+                    </span>
+                    <div class="video-volume">
+                        <button class="video-btn" onclick="toggleMute()">
+                            <i class="fas fa-volume-up" id="volumeIcon"></i>
+                        </button>
+                        <input type="range" id="volumeSlider" min="0" max="100" value="100" onchange="changeVolume(this.value)">
+                    </div>
+                    <div class="video-speed">
+                        <select id="speedSelect" onchange="changeSpeed(this.value)">
+                            <option value="0.25">0.25x</option>
+                            <option value="0.5">0.5x</option>
+                            <option value="0.75">0.75x</option>
+                            <option value="1" selected>Normal</option>
+                            <option value="1.25">1.25x</option>
+                            <option value="1.5">1.5x</option>
+                            <option value="1.75">1.75x</option>
+                            <option value="2">2x</option>
+                        </select>
+                    </div>
+                    <button class="video-btn" onclick="toggleFullscreen()">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
