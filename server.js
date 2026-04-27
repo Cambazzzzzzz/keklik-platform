@@ -490,13 +490,15 @@ app.get('/api/posts', (req, res) => {
         JOIN users u ON p.user_id = u.id
     `;
     
+    const params = [];
     if (user_id) {
-        query += ` WHERE p.user_id = ${user_id}`;
+        query += ` WHERE p.user_id = ?`;
+        params.push(user_id);
     }
     
     query += ' ORDER BY p.created_at DESC LIMIT 50';
     
-    db.all(query, (err, posts) => {
+    db.all(query, params, (err, posts) => {
         if (err) return res.status(500).json({ error: 'İksler yüklenemedi' });
         res.json(posts);
     });
