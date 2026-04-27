@@ -1,3 +1,8 @@
+// Helper: get safe profile image URL
+function getProfileImage(url) {
+    return (url && url !== 'null' && url.trim() !== '') ? url : '/iks.png';
+}
+
 // Global state
 let currentUser = null;
 let selectedMedia = null;
@@ -615,7 +620,7 @@ async function handleSearch(e) {
         
         resultsContainer.innerHTML = users.map(user => `
             <div class="user-result" onclick="openUserProfile('${user.username}')">
-                <img src="${user.profile_image || '/iks.png'}" alt="${user.display_name}">
+                <img src="${getProfileImage(user.profile_image)}" alt="${user.display_name}">
                 <div class="user-result-info">
                     <div class="user-result-name">${user.display_name}</div>
                     <div class="user-result-username">@${user.username}</div>
@@ -710,7 +715,7 @@ function createPostHTML(post, isPublic = false) {
     
     return `
         <div class="post" data-username="${post.username}">
-            <img src="${post.profile_image || '/iks.png'}" alt="${post.display_name}" class="post-avatar">
+            <img src="${getProfileImage(post.profile_image)}" alt="${post.display_name}" class="post-avatar">
             <div class="post-content">
                 <div class="post-header">
                     <span class="post-name">${post.display_name}</span>
@@ -934,7 +939,7 @@ function loadUserProfile() {
     document.getElementById('profileName').textContent = currentUser.display_name;
     document.getElementById('profileUsername').textContent = `@${currentUser.username}`;
     document.getElementById('profileBio').textContent = currentUser.bio || 'Bio eklenmemiş';
-    document.getElementById('profileAvatar').src = currentUser.profile_image || '/iks.png';
+    document.getElementById('profileAvatar').src = getProfileImage(currentUser.profile_image);
     
     if (currentUser.cover_image) {
         document.getElementById('profileCover').style.backgroundImage = `url(${currentUser.cover_image})`;
@@ -1042,7 +1047,7 @@ function loadUserData() {
         sidebarUser.querySelector('.user-name').textContent = currentUser.display_name;
         sidebarUser.querySelector('.user-username').textContent = `@${currentUser.username}`;
         const avatarImg = sidebarUser.querySelector('.user-avatar');
-        avatarImg.src = currentUser.profile_image || '/iks.png';
+        avatarImg.src = getProfileImage(currentUser.profile_image);
         avatarImg.onerror = function() {
             this.src = '/iks.png';
         };
@@ -1051,7 +1056,7 @@ function loadUserData() {
     // Update new post avatar
     const newPostAvatar = document.querySelector('.new-keklik-box .user-avatar');
     if (newPostAvatar) {
-        newPostAvatar.src = currentUser.profile_image || '/iks.png';
+        newPostAvatar.src = getProfileImage(currentUser.profile_image);
         newPostAvatar.onerror = function() {
             this.src = '/iks.png';
         };
@@ -1243,7 +1248,7 @@ async function loadUserProfilePage(username) {
         
         // Set profile image with fallback
         const profileImg = document.getElementById('userProfileAvatar');
-        profileImg.src = user.profile_image || '/iks.png';
+        profileImg.src = getProfileImage(user.profile_image);
         profileImg.onerror = function() {
             this.src = '/iks.png';
         };
@@ -1546,7 +1551,7 @@ async function loadTrendingPosts() {
         container.innerHTML = posts.slice(0, 5).map(post => `
             <div class="trending-post-item" onclick="openUserProfile('${post.username}')">
                 <div class="trending-post-header">
-                    <img src="${post.profile_image || '/iks.png'}" alt="${post.display_name}" class="trending-post-avatar">
+                    <img src="${getProfileImage(post.profile_image)}" alt="${post.display_name}" class="trending-post-avatar">
                     <div class="trending-post-user">
                         <div class="trending-post-name">${post.display_name}</div>
                         <div class="trending-post-username">@${post.username}</div>
@@ -1721,7 +1726,7 @@ async function openQuoteModal() {
         
         quotedPost.innerHTML = `
             <div class="quoted-post-header">
-                <img src="${post.profile_image || '/iks.png'}" alt="${post.display_name}" class="quoted-post-avatar">
+                <img src="${getProfileImage(post.profile_image)}" alt="${post.display_name}" class="quoted-post-avatar">
                 <div class="quoted-post-user">
                     <div class="quoted-post-name">${post.display_name}</div>
                     <div class="quoted-post-username">@${post.username}</div>

@@ -30,9 +30,19 @@ function createWindow() {
     });
 
     // Server hazır olduğunda ana sayfayı yükle
-    setTimeout(() => {
-        mainWindow.loadURL('http://localhost:3456');
-    }, 2000);
+    const tryLoad = (attempt = 0) => {
+        const http = require('http');
+        http.get('http://localhost:3456', (res) => {
+            mainWindow.loadURL('http://localhost:3456');
+        }).on('error', () => {
+            if (attempt < 20) {
+                setTimeout(() => tryLoad(attempt + 1), 300);
+            } else {
+                mainWindow.loadURL('http://localhost:3456');
+            }
+        });
+    };
+    setTimeout(() => tryLoad(), 500);
 
     mainWindow.on('closed', () => {
         mainWindow = null;

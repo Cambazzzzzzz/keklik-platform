@@ -32,7 +32,7 @@ if (!fs.existsSync(uploadsPath)) {
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsPath));
 
 // Multer yapılandırması - Railway volume uyumlu
@@ -255,7 +255,7 @@ app.post('/api/login', (req, res) => {
 
 // USER ROUTES
 app.get('/api/user/:id', (req, res) => {
-    db.get('SELECT id, username, display_name, bio, profile_image, cover_image, created_at FROM users WHERE id = ?', 
+    db.get('SELECT id, username, display_name, bio, website, location, profile_image, cover_image, created_at FROM users WHERE id = ?', 
         [req.params.id], (err, user) => {
         if (err) return res.status(500).json({ error: 'Sunucu hatası' });
         if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
