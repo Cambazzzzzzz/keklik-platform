@@ -11,12 +11,12 @@ const PORT = process.env.PORT || 3456;
 
 // Database ve uploads path - Railway volume için (EN BAŞTA TANIMLA)
 const VOLUME_PATH = process.env.RAILWAY_VOLUME_MOUNT_PATH || '.';
-const dbPath = process.env.DATABASE_PATH || `${VOLUME_PATH}/data/iks.db`;
+const dbPath = process.env.DATABASE_PATH || path.join(VOLUME_PATH, 'iks.db');
 const dbDir = path.dirname(dbPath);
 
 // Uploads klasörü - Railway volume için
 const uploadsPath = process.env.RAILWAY_VOLUME_MOUNT_PATH 
-    ? `${process.env.RAILWAY_VOLUME_MOUNT_PATH}/uploads`
+    ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'uploads')
     : 'uploads';
 
 // Database klasörünü oluştur
