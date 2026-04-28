@@ -370,6 +370,20 @@
                             <i class="fas fa-trash"></i> Hesabı Sil
                         </button>
                     </div>
+
+                    <!-- Engellenenler Bölümü -->
+                    <div class="setting-item setting-item-full">
+                        <div class="setting-info">
+                            <h3><i class="fas fa-ban" style="color:var(--danger);margin-right:6px"></i>Engellenen Kullanıcılar</h3>
+                            <p>Engellediğiniz kişiler içeriklerinizi göremez ve size mesaj gönderemez.</p>
+                        </div>
+                    </div>
+                    <div class="setting-item setting-item-full" style="flex-direction:column;align-items:stretch;gap:12px">
+                        <input type="text" id="blockedSearchInput" class="settings-search-input" placeholder="Engellenenler içinde ara...">
+                        <div id="blockedUsersList" class="blocked-users-list">
+                            <div class="blocked-loading">Yükleniyor...</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

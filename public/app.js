@@ -615,12 +615,18 @@ async function handleSearch(e) {
     }
     
     try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+        const userParam = currentUser ? `&userId=${currentUser.id}` : '';
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}${userParam}`);
         const users = await response.json();
         
+        if (users.length === 0) {
+            resultsContainer.innerHTML = '<div class="search-empty-state">Sonuç bulunamadı</div>';
+            return;
+        }
+
         resultsContainer.innerHTML = users.map(user => `
             <div class="user-result" onclick="openUserProfile('${user.username}')">
-                <img src="${getProfileImage(user.profile_image)}" alt="${user.display_name}">
+                <img src="${getProfileImage(user.profile_image)}" alt="${user.display_name}" onerror="this.src='/iks.png'">
                 <div class="user-result-info">
                     <div class="user-result-name">${user.display_name}</div>
                     <div class="user-result-username">@${user.username}</div>
@@ -893,6 +899,11 @@ function navigateTo(route, param = null) {
             case 'bookmarks':
                 if (currentUser) {
                     loadBookmarks();
+                }
+                break;
+            case 'settings':
+                if (currentUser) {
+                    loadBlockedUsers();
                 }
                 break;
         }
@@ -1188,12 +1199,33 @@ function muteUser() {
     document.getElementById('profileMenuDropdown').classList.remove('active');
 }
 
-function blockUser() {
+async function blockUser() {
+    if (!currentUser) return;
     const username = document.getElementById('userProfileUsername').textContent.replace('@', '');
-    if (confirm(`@${username} hesabını engellemek istediğinizden emin misiniz?`)) {
-        // TODO: Implement block functionality
-        showNotification(`@${username} hesabı engellendi`, 'success');
-        document.getElementById('profileMenuDropdown').classList.remove('active');
+    if (!confirm(`@${username} hesabını engellemek istediğinizden emin misiniz?\n\nEngellenen kişi sizin içeriklerinizi göremez ve size mesaj gönderemez.`)) return;
+
+    try {
+        // Kullanıcı id'sini al
+        const userRes = await fetch(`/api/user/profile/${username}`);
+        const user = await userRes.json();
+        if (!user.id) { showNotification('Kullanıcı bulunamadı', 'error'); return; }
+
+        const response = await fetch('/api/block', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blocker_id: currentUser.id, blocked_id: user.id })
+        });
+        const data = await response.json();
+        if (data.success) {
+            showNotification(`@${username} hesabı engellendi`, 'success');
+            document.getElementById('profileMenuDropdown').classList.remove('active');
+            // Profil sayfasından çık
+            navigateTo('home');
+        } else {
+            showNotification(data.error || 'Engelleme başarısız', 'error');
+        }
+    } catch (error) {
+        showNotification('Bir hata oluştu', 'error');
     }
 }
 
@@ -1823,5 +1855,73 @@ async function checkRepostStatus(postId) {
         }
     } catch (error) {
         console.error('Error checking repost status:', error);
+    }
+}
+
+// ── ENGELLENENLER ──────────────────────────────────────────────
+
+async function loadBlockedUsers() {
+    if (!currentUser) return;
+    const container = document.getElementById('blockedUsersList');
+    if (!container) return;
+
+    try {
+        const res = await fetch(`/api/blocks/${currentUser.id}`);
+        const blocked = await res.json();
+
+        if (blocked.length === 0) {
+            container.innerHTML = '<div class="blocked-empty">Engellenen kullanıcı yok.</div>';
+            return;
+        }
+
+        container.innerHTML = blocked.map(user => `
+            <div class="blocked-user-item" data-id="${user.id}" data-name="${user.display_name || user.username}" data-username="${user.username}">
+                <img src="${getProfileImage(user.profile_image)}" alt="${user.display_name}" onerror="this.src='/iks.png'" class="blocked-user-avatar">
+                <div class="blocked-user-info">
+                    <div class="blocked-user-name">${user.display_name || user.username}</div>
+                    <div class="blocked-user-username">@${user.username}</div>
+                </div>
+                <button class="btn-unblock-user" onclick="unblockUser(${user.id}, '${user.username}')">
+                    <i class="fas fa-unlock"></i> Engeli Kaldır
+                </button>
+            </div>
+        `).join('');
+
+        // Arama filtresi
+        const searchInput = document.getElementById('blockedSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                const q = searchInput.value.toLowerCase();
+                document.querySelectorAll('.blocked-user-item').forEach(item => {
+                    const name = (item.dataset.name || '').toLowerCase();
+                    const username = (item.dataset.username || '').toLowerCase();
+                    item.style.display = (name.includes(q) || username.includes(q)) ? '' : 'none';
+                });
+            });
+        }
+    } catch (error) {
+        if (container) container.innerHTML = '<div class="blocked-empty">Yüklenemedi.</div>';
+    }
+}
+
+async function unblockUser(blockedId, username) {
+    if (!currentUser) return;
+    if (!confirm(`@${username} engelini kaldırmak istediğinizden emin misiniz?`)) return;
+
+    try {
+        const res = await fetch('/api/block', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blocker_id: currentUser.id, blocked_id: blockedId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification(`@${username} engeli kaldırıldı`, 'success');
+            loadBlockedUsers(); // Listeyi yenile
+        } else {
+            showNotification(data.error || 'Engel kaldırılamadı', 'error');
+        }
+    } catch (error) {
+        showNotification('Bir hata oluştu', 'error');
     }
 }

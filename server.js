@@ -10,14 +10,14 @@ const app = express();
 const PORT = process.env.PORT || 3456;
 
 // Database ve uploads path - Railway volume için (EN BAŞTA TANIMLA)
-const VOLUME_PATH = process.env.RAILWAY_VOLUME_MOUNT_PATH || '.';
-const dbPath = process.env.DATABASE_PATH || path.join(VOLUME_PATH, 'iks.db');
+const VOLUME_PATH = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, 'data');
+const dbPath = process.env.DATABASE_PATH || path.join(VOLUME_PATH, 'db', 'iks.db');
 const dbDir = path.dirname(dbPath);
 
 // Uploads klasörü - Railway volume için
 const uploadsPath = process.env.RAILWAY_VOLUME_MOUNT_PATH 
     ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'uploads')
-    : 'uploads';
+    : path.join(__dirname, 'uploads');
 
 // Database klasörünü oluştur
 if (!fs.existsSync(dbDir)) {
@@ -161,6 +161,17 @@ function initDatabase() {
             FOREIGN KEY (user_id) REFERENCES users(id),
             FOREIGN KEY (original_post_id) REFERENCES posts(id) ON DELETE CASCADE,
             UNIQUE(user_id, original_post_id, repost_type)
+        )`);
+
+        // Engelleme tablosu
+        db.run(`CREATE TABLE IF NOT EXISTS blocks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            blocker_id INTEGER NOT NULL,
+            blocked_id INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (blocker_id) REFERENCES users(id),
+            FOREIGN KEY (blocked_id) REFERENCES users(id),
+            UNIQUE(blocker_id, blocked_id)
         )`);
     });
 }
@@ -751,19 +762,6 @@ app.get('/api/messages/:userId/:otherUserId', (req, res) => {
     });
 });
 
-app.post('/api/messages', (req, res) => {
-    const { sender_id, receiver_id, content } = req.body;
-    
-    db.run(
-        'INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)',
-        [sender_id, receiver_id, content],
-        function(err) {
-            if (err) return res.status(500).json({ error: 'Mesaj gönderilemedi' });
-            res.json({ success: true, messageId: this.lastID });
-        }
-    );
-});
-
 // FOLLOW ROUTES
 app.post('/api/follow', (req, res) => {
     const { follower_id, following_id } = req.body;
@@ -888,17 +886,123 @@ app.delete('/api/user/:id/delete', async (req, res) => {
 
 // SEARCH
 app.get('/api/search', (req, res) => {
-    const { q } = req.query;
-    
-    db.all(`
-        SELECT id, username, display_name, profile_image, bio
-        FROM users
-        WHERE username LIKE ? OR display_name LIKE ?
-        LIMIT 20
-    `, [`%${q}%`, `%${q}%`], (err, users) => {
-        if (err) return res.status(500).json({ error: 'Arama yapılamadı' });
-        res.json(users);
+    const { q, userId } = req.query;
+    if (!q || q.trim().length < 1) return res.json([]);
+
+    const term = `%${q.trim()}%`;
+
+    if (userId) {
+        // Engellenen ve bizi engelleyenleri hariç tut
+        db.all(
+            `SELECT blocker_id as id FROM blocks WHERE blocked_id = ?
+             UNION SELECT blocked_id as id FROM blocks WHERE blocker_id = ?`,
+            [userId, userId],
+            (err, blocked) => {
+                const blockedIds = (blocked || []).map(r => r.id);
+                const placeholders = blockedIds.length ? blockedIds.map(() => '?').join(',') : '0';
+                db.all(
+                    `SELECT id, username, display_name, profile_image, bio
+                     FROM users
+                     WHERE (username LIKE ? OR display_name LIKE ?)
+                     AND id != ?
+                     AND id NOT IN (${placeholders})
+                     LIMIT 20`,
+                    [term, term, userId, ...blockedIds],
+                    (err, users) => {
+                        if (err) return res.status(500).json({ error: 'Arama yapılamadı' });
+                        res.json(users);
+                    }
+                );
+            }
+        );
+    } else {
+        db.all(
+            `SELECT id, username, display_name, profile_image, bio
+             FROM users
+             WHERE username LIKE ? OR display_name LIKE ?
+             LIMIT 20`,
+            [term, term],
+            (err, users) => {
+                if (err) return res.status(500).json({ error: 'Arama yapılamadı' });
+                res.json(users);
+            }
+        );
+    }
+});
+
+// BLOCK ROUTES
+// Engelle
+app.post('/api/block', (req, res) => {
+    const { blocker_id, blocked_id } = req.body;
+    if (!blocker_id || !blocked_id) return res.status(400).json({ error: 'Eksik parametre' });
+    if (blocker_id === blocked_id) return res.status(400).json({ error: 'Kendinizi engelleyemezsiniz' });
+
+    db.run('INSERT OR IGNORE INTO blocks (blocker_id, blocked_id) VALUES (?, ?)',
+        [blocker_id, blocked_id], (err) => {
+        if (err) return res.status(500).json({ error: 'Engelleme başarısız' });
+        // Karşılıklı takibi kaldır
+        db.run('DELETE FROM follows WHERE (follower_id=? AND following_id=?) OR (follower_id=? AND following_id=?)',
+            [blocker_id, blocked_id, blocked_id, blocker_id]);
+        res.json({ success: true });
     });
+});
+
+// Engeli kaldır
+app.delete('/api/block', (req, res) => {
+    const { blocker_id, blocked_id } = req.body;
+    db.run('DELETE FROM blocks WHERE blocker_id=? AND blocked_id=?',
+        [blocker_id, blocked_id], (err) => {
+        if (err) return res.status(500).json({ error: 'Engel kaldırma başarısız' });
+        res.json({ success: true });
+    });
+});
+
+// Engellenenler listesi
+app.get('/api/blocks/:userId', (req, res) => {
+    db.all(
+        `SELECT u.id, u.username, u.display_name, u.profile_image
+         FROM blocks b JOIN users u ON b.blocked_id = u.id
+         WHERE b.blocker_id = ?`,
+        [req.params.userId],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: 'Engellenenler alınamadı' });
+            res.json(rows);
+        }
+    );
+});
+
+// Engel durumu kontrolü
+app.get('/api/block/status/:blockerId/:blockedId', (req, res) => {
+    const { blockerId, blockedId } = req.params;
+    db.get(
+        'SELECT id FROM blocks WHERE (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)',
+        [blockerId, blockedId, blockedId, blockerId],
+        (err, row) => {
+            if (err) return res.status(500).json({ error: 'Durum alınamadı' });
+            res.json({ isBlocked: !!row });
+        }
+    );
+});
+
+// Mesaj gönderirken engel kontrolü
+app.post('/api/messages', (req, res) => {
+    const { sender_id, receiver_id, content } = req.body;
+    // Engel kontrolü
+    db.get(
+        'SELECT id FROM blocks WHERE (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)',
+        [receiver_id, sender_id, sender_id, receiver_id],
+        (err, block) => {
+            if (block) return res.status(403).json({ error: 'Bu kullanıcıya mesaj gönderemezsiniz' });
+            db.run(
+                'INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)',
+                [sender_id, receiver_id, content],
+                function(err) {
+                    if (err) return res.status(500).json({ error: 'Mesaj gönderilemedi' });
+                    res.json({ success: true, messageId: this.lastID });
+                }
+            );
+        }
+    );
 });
 
 app.listen(PORT, '0.0.0.0', () => {
