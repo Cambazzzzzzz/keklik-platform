@@ -15,19 +15,24 @@ const dbPath = process.env.DATABASE_PATH || path.join(VOLUME_PATH, 'db', 'iks.db
 const dbDir = path.dirname(dbPath);
 
 // Uploads klasörü - Railway volume için
-const uploadsPath = process.env.RAILWAY_VOLUME_MOUNT_PATH 
+const uploadsPath = process.env.RAILWAY_VOLUME_MOUNT_PATH
     ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'uploads')
     : path.join(__dirname, 'uploads');
 
-// Database klasörünü oluştur
-if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
+// Gerekli klasörleri oluştur
+try {
+    if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+    }
+    if (!fs.existsSync(uploadsPath)) {
+        fs.mkdirSync(uploadsPath, { recursive: true });
+    }
+} catch (e) {
+    console.error('Klasör oluşturma hatası:', e.message);
 }
 
-// Upload klasörünü oluştur
-if (!fs.existsSync(uploadsPath)) {
-    fs.mkdirSync(uploadsPath, { recursive: true });
-}
+console.log(`📁 DB path: ${dbPath}`);
+console.log(`📁 Uploads path: ${uploadsPath}`);
 
 // Middleware
 app.use(cors());

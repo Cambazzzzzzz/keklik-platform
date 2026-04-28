@@ -731,9 +731,9 @@ function createPostHTML(post, isPublic = false) {
                 <div class="post-text">${formatPostText(post.content)}</div>
                 ${post.media_url ? `
                     <div class="post-media">
-                        ${post.media_type === 'video' ? 
-                            `<video controls><source src="${post.media_url}" type="video/mp4"></video>` :
-                            `<img src="${post.media_url}" alt="Post media">`
+                        ${post.media_type === 'video' ?
+                            `<video controls preload="metadata" onclick="this.paused ? this.play() : this.pause()" onkeydown="if(event.code==='Space'){event.preventDefault();this.paused?this.play():this.pause()}" tabindex="0"><source src="${post.media_url}" type="video/mp4"></video>` :
+                            `<img src="${post.media_url}" alt="Post media" onclick="openLightbox('${post.media_url}')" style="cursor:pointer">`
                         }
                     </div>
                 ` : ''}
@@ -811,21 +811,24 @@ async function submitKeklik(content, media, textElementId, previewElementId) {
         showNotification('Keklik paylaşmak için giriş yapın', 'error');
         return;
     }
-    
+
+    // content boşsa en az bir boşluk gönder (sadece medya paylaşımı)
+    const safeContent = content || ' ';
+
     const formData = new FormData();
     formData.append('user_id', currentUser.id);
-    formData.append('content', content);
-    
+    formData.append('content', safeContent);
+
     if (media) {
         formData.append('media', media);
     }
-    
+
     try {
         const response = await fetch('/api/posts', {
             method: 'POST',
             body: formData
         });
-        
+
         const data = await response.json();
         if (data.success) {
             showNotification('Keklik başarıyla paylaşıldı!', 'success');
@@ -833,10 +836,12 @@ async function submitKeklik(content, media, textElementId, previewElementId) {
             document.getElementById(previewElementId).innerHTML = '';
             selectedMedia = null;
             loadFeed();
+            loadTrendingPosts();
         } else {
             showNotification(data.error || 'Keklik paylaşılamadı', 'error');
         }
     } catch (error) {
+        console.error('submitKeklik error:', error);
         showNotification('Bir hata oluştu', 'error');
     }
 }
@@ -1565,6 +1570,125 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// ── LIKE / COMMENT / REPOST ──────────────────────────────────────────────
+
+async function toggleLike(postId) {
+    if (!currentUser) {
+        showNotification('Beğenmek için giriş yapın', 'error');
+        return;
+    }
+    try {
+        const res = await fetch(`/api/posts/${postId}/like`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: currentUser.id })
+        });
+        const data = await res.json();
+        if (data.success) {
+            // Butonu bul ve sayıyı güncelle
+            const btn = document.querySelector(`.post-action[onclick="toggleLike(${postId})"]`);
+            if (btn) {
+                const span = btn.querySelector('span');
+                const icon = btn.querySelector('i');
+                const current = parseInt(span.textContent) || 0;
+                if (data.action === 'liked') {
+                    span.textContent = current + 1;
+                    icon.style.color = '#f04747';
+                    btn.classList.add('liked');
+                } else {
+                    span.textContent = Math.max(0, current - 1);
+                    icon.style.color = '';
+                    btn.classList.remove('liked');
+                }
+            }
+        }
+    } catch (error) {
+        showNotification('Bir hata oluştu', 'error');
+    }
+}
+
+async function toggleComments(postId) {
+    // Yorum bölümünü aç/kapat
+    const existingSection = document.getElementById(`comments-${postId}`);
+    if (existingSection) {
+        existingSection.remove();
+        return;
+    }
+
+    const postEl = document.querySelector(`.post-action[onclick="toggleComments(${postId})"]`)?.closest('.post');
+    if (!postEl) return;
+
+    const section = document.createElement('div');
+    section.id = `comments-${postId}`;
+    section.className = 'comments-section';
+
+    try {
+        const res = await fetch(`/api/posts/${postId}/comments`);
+        const comments = await res.json();
+
+        const commentsHTML = comments.length === 0
+            ? '<div class="no-comments">Henüz yorum yok</div>'
+            : comments.map(c => `
+                <div class="comment-item">
+                    <img src="${getProfileImage(c.profile_image)}" class="comment-avatar" onerror="this.src='/iks.png'">
+                    <div class="comment-body">
+                        <span class="comment-author">${c.display_name || c.username}</span>
+                        <span class="comment-text">${c.content}</span>
+                    </div>
+                </div>
+            `).join('');
+
+        const inputHTML = currentUser ? `
+            <div class="comment-input-row">
+                <input type="text" class="comment-input" id="comment-input-${postId}" placeholder="Yorum yaz...">
+                <button class="comment-send-btn" onclick="sendComment(${postId})">Gönder</button>
+            </div>
+        ` : '';
+
+        section.innerHTML = commentsHTML + inputHTML;
+
+        // Enter ile gönder
+        section.querySelector(`#comment-input-${postId}`)?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendComment(postId);
+        });
+
+        postEl.appendChild(section);
+    } catch (error) {
+        section.innerHTML = '<div class="no-comments">Yorumlar yüklenemedi</div>';
+        postEl.appendChild(section);
+    }
+}
+
+async function sendComment(postId) {
+    if (!currentUser) return;
+    const input = document.getElementById(`comment-input-${postId}`);
+    const content = input?.value.trim();
+    if (!content) return;
+
+    try {
+        const res = await fetch(`/api/posts/${postId}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: currentUser.id, content })
+        });
+        const data = await res.json();
+        if (data.success) {
+            input.value = '';
+            // Yorum sayısını güncelle
+            const btn = document.querySelector(`.post-action[onclick="toggleComments(${postId})"]`);
+            if (btn) {
+                const span = btn.querySelector('span');
+                span.textContent = (parseInt(span.textContent) || 0) + 1;
+            }
+            // Yorumları yenile
+            document.getElementById(`comments-${postId}`)?.remove();
+            toggleComments(postId);
+        }
+    } catch (error) {
+        showNotification('Yorum gönderilemedi', 'error');
+    }
+}
 
 // Load Trending Posts
 async function loadTrendingPosts() {
