@@ -1096,13 +1096,24 @@ app.get('/register', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/admin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 
 // ═══════════════════════════════════════════════════════════
 // ADMIN API ROUTES
 // ═══════════════════════════════════════════════════════════
 
+// Admin middleware - basit kontrol
+function isAdmin(req, res, next) {
+    // Gerçek uygulamada JWT token veya session kontrolü yapılmalı
+    // Şimdilik sadece API'ye erişime izin veriyoruz
+    next();
+}
+
 // Admin Stats
-app.get('/api/admin/stats/users', (req, res) => {
+app.get('/api/admin/stats/users', isAdmin, (req, res) => {
     db.get('SELECT COUNT(*) as total FROM users', (err, total) => {
         if (err) return res.status(500).json({ error: 'Hata' });
         
@@ -1113,14 +1124,14 @@ app.get('/api/admin/stats/users', (req, res) => {
     });
 });
 
-app.get('/api/admin/stats/posts', (req, res) => {
+app.get('/api/admin/stats/posts', isAdmin, (req, res) => {
     db.get('SELECT COUNT(*) as total FROM posts', (err, result) => {
         if (err) return res.status(500).json({ error: 'Hata' });
         res.json({ total: result.total });
     });
 });
 
-app.get('/api/admin/stats/likes', (req, res) => {
+app.get('/api/admin/stats/likes', isAdmin, (req, res) => {
     db.get('SELECT COUNT(*) as total FROM likes', (err, result) => {
         if (err) return res.status(500).json({ error: 'Hata' });
         res.json({ total: result.total });
@@ -1128,19 +1139,22 @@ app.get('/api/admin/stats/likes', (req, res) => {
 });
 
 // Admin Users
-app.get('/api/admin/users', (req, res) => {
+app.get('/api/admin/users', isAdmin, (req, res) => {
     db.all(`
         SELECT u.*, 
         (SELECT content FROM posts WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) as last_post
         FROM users u
         ORDER BY u.created_at DESC
     `, (err, users) => {
-        if (err) return res.status(500).json({ error: 'Hata' });
+        if (err) {
+            console.error('Admin users error:', err);
+            return res.status(500).json({ error: 'Hata' });
+        }
         res.json(users);
     });
 });
 
-app.get('/api/admin/users/:id/details', (req, res) => {
+app.get('/api/admin/users/:id/details', isAdmin, (req, res) => {
     const userId = req.params.id;
     
     db.get('SELECT * FROM users WHERE id = ?', [userId], (err, user) => {
@@ -1165,7 +1179,7 @@ app.get('/api/admin/users/:id/details', (req, res) => {
     });
 });
 
-app.delete('/api/admin/users/:id', (req, res) => {
+app.delete('/api/admin/users/:id', isAdmin, (req, res) => {
     const userId = req.params.id;
     
     db.serialize(() => {
@@ -1182,7 +1196,7 @@ app.delete('/api/admin/users/:id', (req, res) => {
 });
 
 // Admin Posts
-app.get('/api/admin/posts', (req, res) => {
+app.get('/api/admin/posts', isAdmin, (req, res) => {
     db.all(`
         SELECT p.*, u.username,
         (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
@@ -1196,7 +1210,7 @@ app.get('/api/admin/posts', (req, res) => {
     });
 });
 
-app.delete('/api/admin/posts/:id', (req, res) => {
+app.delete('/api/admin/posts/:id', isAdmin, (req, res) => {
     const postId = req.params.id;
     
     db.run('DELETE FROM posts WHERE id = ?', [postId], (err) => {
@@ -1215,14 +1229,14 @@ db.run(`CREATE TABLE IF NOT EXISTS trends (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`);
 
-app.get('/api/admin/trends', (req, res) => {
+app.get('/api/admin/trends', isAdmin, (req, res) => {
     db.all('SELECT * FROM trends ORDER BY id DESC', (err, trends) => {
         if (err) return res.status(500).json({ error: 'Hata' });
         res.json(trends || []);
     });
 });
 
-app.post('/api/admin/trends', (req, res) => {
+app.post('/api/admin/trends', isAdmin, (req, res) => {
     const { category, title, count } = req.body;
     
     db.run('INSERT INTO trends (category, title, count) VALUES (?, ?, ?)', 
@@ -1232,7 +1246,7 @@ app.post('/api/admin/trends', (req, res) => {
     });
 });
 
-app.put('/api/admin/trends/:id', (req, res) => {
+app.put('/api/admin/trends/:id', isAdmin, (req, res) => {
     const { category, title, count } = req.body;
     const id = req.params.id;
     
@@ -1243,7 +1257,7 @@ app.put('/api/admin/trends/:id', (req, res) => {
     });
 });
 
-app.delete('/api/admin/trends/:id', (req, res) => {
+app.delete('/api/admin/trends/:id', isAdmin, (req, res) => {
     db.run('DELETE FROM trends WHERE id = ?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: 'Trend silinemedi' });
         res.json({ success: true });
@@ -1260,14 +1274,14 @@ db.run(`CREATE TABLE IF NOT EXISTS suggestions (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`);
 
-app.get('/api/admin/suggestions', (req, res) => {
+app.get('/api/admin/suggestions', isAdmin, (req, res) => {
     db.all('SELECT * FROM suggestions ORDER BY id DESC', (err, suggestions) => {
         if (err) return res.status(500).json({ error: 'Hata' });
         res.json(suggestions || []);
     });
 });
 
-app.post('/api/admin/suggestions', (req, res) => {
+app.post('/api/admin/suggestions', isAdmin, (req, res) => {
     const { username, name, avatar } = req.body;
     
     db.run('INSERT INTO suggestions (username, name, avatar) VALUES (?, ?, ?)', 
@@ -1277,7 +1291,7 @@ app.post('/api/admin/suggestions', (req, res) => {
     });
 });
 
-app.put('/api/admin/suggestions/:id', (req, res) => {
+app.put('/api/admin/suggestions/:id', isAdmin, (req, res) => {
     const { username, name, avatar } = req.body;
     const id = req.params.id;
     
@@ -1288,7 +1302,7 @@ app.put('/api/admin/suggestions/:id', (req, res) => {
     });
 });
 
-app.delete('/api/admin/suggestions/:id', (req, res) => {
+app.delete('/api/admin/suggestions/:id', isAdmin, (req, res) => {
     db.run('DELETE FROM suggestions WHERE id = ?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: 'Öneri silinemedi' });
         res.json({ success: true });

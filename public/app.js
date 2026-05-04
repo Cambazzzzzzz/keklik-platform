@@ -847,6 +847,8 @@ async function submitKeklik(content, media, textElementId, previewElementId) {
         return;
     }
 
+    console.log('submitKeklik called:', { content, media, user: currentUser });
+
     // content boşsa en az bir boşluk gönder (sadece medya paylaşımı)
     const safeContent = content || ' ';
 
@@ -859,25 +861,47 @@ async function submitKeklik(content, media, textElementId, previewElementId) {
     }
 
     try {
+        console.log('Sending post request...');
         const response = await fetch('/api/posts', {
             method: 'POST',
             body: formData
         });
 
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Response data:', data);
+        
         if (data.success) {
             showNotification('Keklik başarıyla paylaşıldı!', 'success');
-            document.getElementById(textElementId).value = '';
-            document.getElementById(previewElementId).innerHTML = '';
+            
+            // Clear inputs
+            const textEl = document.getElementById(textElementId);
+            const previewEl = document.getElementById(previewElementId);
+            if (textEl) textEl.value = '';
+            if (previewEl) previewEl.innerHTML = '';
             selectedMedia = null;
             
-            // Ana sayfaya yönlendir ve feed'i yükle
-            navigateTo('home');
-            setTimeout(() => {
+            // Ana sayfadaysak direkt yükle, değilse yönlendir
+            const homePage = document.getElementById('homePage');
+            if (homePage && homePage.classList.contains('active')) {
                 loadFeed();
                 loadTrendingPosts();
-            }, 100);
+            } else {
+                navigateTo('home');
+                setTimeout(() => {
+                    loadFeed();
+                    loadTrendingPosts();
+                }, 200);
+            }
         } else {
+            console.error('Post failed:', data.error);
+            showNotification(data.error || 'Keklik paylaşılamadı', 'error');
+        }
+    } catch (error) {
+        console.error('submitKeklik error:', error);
+        showNotification('Bir hata oluştu: ' + error.message, 'error');
+    }
+}
             showNotification(data.error || 'Keklik paylaşılamadı', 'error');
         }
     } catch (error) {
