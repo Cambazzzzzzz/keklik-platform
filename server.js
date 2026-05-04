@@ -481,15 +481,37 @@ app.get('/api/posts/trending', (req, res) => {
 
 // POST ROUTES
 app.post('/api/posts', upload.single('media'), (req, res) => {
-    const { user_id, content } = req.body;
+    // Multer kullanıldığında req.body text field'ları içerir
+    let user_id = req.body.user_id;
+    let content = req.body.content;
+    
+    // Eğer FormData gönderildiyse string olabilir, parse et
+    if (typeof user_id === 'string') user_id = parseInt(user_id);
+    
     const media_url = req.file ? `/uploads/${req.file.filename}` : null;
     const media_type = req.file ? (req.file.mimetype.startsWith('video') ? 'video' : 'image') : null;
+    
+    console.log('📝 POST /api/posts:', { user_id, content: content?.substring(0, 50), media_url, media_type });
+    
+    if (!user_id || isNaN(user_id)) {
+        console.error('❌ user_id eksik veya geçersiz:', user_id);
+        return res.status(400).json({ error: 'user_id gerekli' });
+    }
+    
+    if (!content || content.trim().length === 0) {
+        console.error('❌ content boş');
+        return res.status(400).json({ error: 'İçerik boş olamaz' });
+    }
     
     db.run(
         'INSERT INTO posts (user_id, content, media_url, media_type) VALUES (?, ?, ?, ?)',
         [user_id, content, media_url, media_type],
         function(err) {
-            if (err) return res.status(500).json({ error: 'Keklik paylaşılamadı' });
+            if (err) {
+                console.error('❌ DB hatası:', err.message);
+                return res.status(500).json({ error: 'Keklik paylaşılamadı: ' + err.message });
+            }
+            console.log('✅ Keklik oluşturuldu:', this.lastID);
             res.json({ success: true, postId: this.lastID });
         }
     );
@@ -976,17 +998,23 @@ app.get('/api/blocks/:userId', (req, res) => {
     );
 });
 
-// Engel durumu kontrolü
+// Engel durumu kontrolü - username ile de çalışsın
 app.get('/api/block/status/:blockerId/:blockedId', (req, res) => {
     const { blockerId, blockedId } = req.params;
-    db.get(
-        'SELECT id FROM blocks WHERE (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)',
-        [blockerId, blockedId, blockedId, blockerId],
-        (err, row) => {
-            if (err) return res.status(500).json({ error: 'Durum alınamadı' });
-            res.json({ isBlocked: !!row });
-        }
-    );
+    
+    // Eğer blockedId bir username ise, önce user id'yi bul
+    db.get('SELECT id FROM users WHERE username = ?', [blockedId], (err, user) => {
+        const actualBlockedId = user ? user.id : blockedId;
+        
+        db.get(
+            'SELECT id FROM blocks WHERE (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)',
+            [blockerId, actualBlockedId, actualBlockedId, blockerId],
+            (err, row) => {
+                if (err) return res.status(500).json({ error: 'Durum alınamadı' });
+                res.json({ isBlocked: !!row });
+            }
+        );
+    });
 });
 
 // Mesaj gönderirken engel kontrolü

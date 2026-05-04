@@ -658,6 +658,7 @@ body.light-theme .post:hover {
     align-items: center;
     gap: 8px;
     margin-bottom: 8px;
+    position: relative;
 }
 
 .post-name {
@@ -769,7 +770,9 @@ body.light-theme .post:hover {
 }
 
 .post-menu {
-    position: relative;
+    position: absolute;
+    right: 0;
+    top: 0;
 }
 
 .post-menu-btn {

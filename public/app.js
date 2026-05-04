@@ -576,8 +576,17 @@ async function loadFollowCounts(userId) {
         const response = await fetch(`/api/follow/counts/${userId}`);
         const data = await response.json();
         
-        document.getElementById('userFollowersCount').textContent = data.followers;
-        document.getElementById('userFollowingCount').textContent = data.following;
+        // Profil sayfası için
+        const followersEl = document.getElementById('followersCount');
+        const followingEl = document.getElementById('followingCount');
+        if (followersEl) followersEl.textContent = data.followers;
+        if (followingEl) followingEl.textContent = data.following;
+        
+        // User profil sayfası için
+        const userFollowersEl = document.getElementById('userFollowersCount');
+        const userFollowingEl = document.getElementById('userFollowingCount');
+        if (userFollowersEl) userFollowersEl.textContent = data.followers;
+        if (userFollowingEl) userFollowingEl.textContent = data.following;
     } catch (error) {
         console.error('Error loading follow counts:', error);
     }
@@ -699,6 +708,24 @@ function addProfileClickListeners() {
 
 function createPostHTML(post, isPublic = false) {
     const timeAgo = getTimeAgo(post.created_at);
+    const isOwnPost = currentUser && currentUser.id === post.user_id;
+    
+    const postMenuHTML = isOwnPost && !isPublic ? `
+        <div class="post-menu">
+            <button class="post-menu-btn" onclick="togglePostMenu(event, ${post.id})">
+                <i class="fas fa-ellipsis-h"></i>
+            </button>
+            <div class="post-menu-dropdown" id="post-menu-${post.id}">
+                <button class="post-menu-item" onclick="editPost(${post.id})">
+                    <i class="fas fa-edit"></i> Düzenle
+                </button>
+                <button class="post-menu-item danger" onclick="deletePost(${post.id})">
+                    <i class="fas fa-trash"></i> Sil
+                </button>
+            </div>
+        </div>
+    ` : '';
+    
     const actionsHTML = isPublic ? '' : `
         <div class="post-actions">
             <button class="post-action" onclick="toggleLike(${post.id})">
@@ -709,7 +736,7 @@ function createPostHTML(post, isPublic = false) {
                 <i class="fas fa-comment"></i>
                 <span>${post.replies || 0}</span>
             </button>
-            <button class="post-action">
+            <button class="post-action" onclick="showRepostMenu(${post.id}, this)">
                 <i class="fas fa-retweet"></i>
                 <span>${post.retweets || 0}</span>
             </button>
@@ -720,15 +747,16 @@ function createPostHTML(post, isPublic = false) {
     `;
     
     return `
-        <div class="post" data-username="${post.username}">
+        <div class="post" data-username="${post.username}" data-post-id="${post.id}">
             <img src="${getProfileImage(post.profile_image)}" alt="${post.display_name}" class="post-avatar">
             <div class="post-content">
                 <div class="post-header">
                     <span class="post-name">${post.display_name}</span>
                     <span class="post-username">@${post.username}</span>
                     <span class="post-time">${timeAgo}</span>
+                    ${postMenuHTML}
                 </div>
-                <div class="post-text">${formatPostText(post.content)}</div>
+                <div class="post-text" id="post-text-${post.id}">${formatPostText(post.content)}</div>
                 ${post.media_url ? `
                     <div class="post-media">
                         ${post.media_type === 'video' ?
@@ -889,6 +917,7 @@ function navigateTo(route, param = null) {
             case 'profile':
                 if (currentUser) {
                     loadUserProfile();
+                    loadFollowCounts(currentUser.id);
                 }
                 break;
             case 'messages':
@@ -914,7 +943,7 @@ function navigateTo(route, param = null) {
         }
     }
     
-    // Update URL without page reload - use replaceState to avoid adding to history
+    // Update URL without page reload - use pushState instead of replaceState
     let newUrl;
     if (route === 'userProfile' && param) {
         newUrl = `/${param}`;
@@ -924,7 +953,7 @@ function navigateTo(route, param = null) {
     
     // Only update URL if it's different from current URL
     if (window.location.pathname !== newUrl) {
-        window.history.replaceState({route, param}, '', newUrl);
+        window.history.pushState({route, param}, '', newUrl);
     }
 }
 
@@ -959,10 +988,13 @@ function loadUserProfile() {
     
     if (currentUser.cover_image) {
         document.getElementById('profileCover').style.backgroundImage = `url(${currentUser.cover_image})`;
+    } else {
+        document.getElementById('profileCover').style.background = 'var(--gradient-primary)';
     }
     
     // Show edit button for own profile
-    document.getElementById('editProfileBtn').style.display = 'block';
+    const editBtn = document.getElementById('editProfileBtn');
+    if (editBtn) editBtn.style.display = 'block';
     
     // Load user posts
     loadUserPosts(currentUser.id);
@@ -1112,23 +1144,43 @@ async function loadFeed() {
 
 // Handle browser back/forward
 window.addEventListener('popstate', (e) => {
-    const route = e.state?.route || 'home';
-    navigateTo(route);
+    const path = window.location.pathname;
+    
+    if (path === '/' || path === '/home') {
+        navigateTo('home');
+    } else if (path.startsWith('/')) {
+        const parts = path.substring(1).split('/');
+        const route = parts[0];
+        
+        // Check if it's a username (user profile)
+        if (!['explore', 'notifications', 'messages', 'bookmarks', 'profile', 'settings'].includes(route)) {
+            navigateTo('userProfile', route);
+        } else {
+            navigateTo(route);
+        }
+    }
 });
 
 // Initialize route on page load
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
-    let route = 'home';
-    
-    if (path !== '/') {
-        route = path.substring(1); // Remove leading slash
-    }
     
     // Wait for auth check to complete
     setTimeout(() => {
-        if (document.querySelector(`[data-route="${route}"]`)) {
-            navigateTo(route);
+        if (path === '/' || path === '/home') {
+            navigateTo('home');
+        } else if (path.startsWith('/')) {
+            const parts = path.substring(1).split('/');
+            const route = parts[0];
+            
+            // Check if it's a username (user profile)
+            if (!['explore', 'notifications', 'messages', 'bookmarks', 'profile', 'settings'].includes(route)) {
+                navigateTo('userProfile', route);
+            } else if (document.querySelector(`[data-route="${route}"]`)) {
+                navigateTo(route);
+            } else {
+                navigateTo('home');
+            }
         }
     }, 100);
 });
@@ -1213,7 +1265,10 @@ async function blockUser() {
         // Kullanıcı id'sini al
         const userRes = await fetch(`/api/user/profile/${username}`);
         const user = await userRes.json();
-        if (!user.id) { showNotification('Kullanıcı bulunamadı', 'error'); return; }
+        if (!user.id) { 
+            showNotification('Kullanıcı bulunamadı', 'error'); 
+            return; 
+        }
 
         const response = await fetch('/api/block', {
             method: 'POST',
@@ -1223,13 +1278,15 @@ async function blockUser() {
         const data = await response.json();
         if (data.success) {
             showNotification(`@${username} hesabı engellendi`, 'success');
-            document.getElementById('profileMenuDropdown').classList.remove('active');
+            const dropdown = document.getElementById('profileMenuDropdown');
+            if (dropdown) dropdown.classList.remove('active');
             // Profil sayfasından çık
-            navigateTo('home');
+            setTimeout(() => navigateTo('home'), 500);
         } else {
             showNotification(data.error || 'Engelleme başarısız', 'error');
         }
     } catch (error) {
+        console.error('Block error:', error);
         showNotification('Bir hata oluştu', 'error');
     }
 }
@@ -1246,6 +1303,17 @@ function reportUser() {
 // Update loadUserProfilePage function to handle new fields and menu
 async function loadUserProfilePage(username) {
     try {
+        // Engel kontrolü yap
+        if (currentUser) {
+            const blockCheckRes = await fetch(`/api/block/status/${currentUser.id}/${username}`);
+            const blockData = await blockCheckRes.json();
+            if (blockData.isBlocked) {
+                showNotification('Bu kullanıcıyı görüntüleyemezsiniz', 'error');
+                navigateTo('home');
+                return;
+            }
+        }
+
         const response = await fetch(`/api/user/profile/${username}`);
         const user = await response.json();
         
@@ -1325,6 +1393,16 @@ async function loadUserProfilePage(username) {
             document.getElementById('followBtn').style.display = 'block';
             document.getElementById('messageBtn').style.display = 'block';
             document.getElementById('profileMenu').style.display = 'block';
+            
+            // Follow butonuna event listener ekle
+            const followBtn = document.getElementById('followBtn');
+            followBtn.onclick = () => toggleFollow(user.id);
+            
+            // Check follow status
+            checkFollowStatus(user.id);
+            
+            // Load follow counts
+            loadFollowCounts(user.id);
         } else {
             // Guest user
             document.getElementById('editOwnProfileBtn').style.display = 'none';
@@ -1342,6 +1420,7 @@ async function loadUserProfilePage(username) {
         document.getElementById('userProfileSubtitle').textContent = `${posts.length} Keklik`;
         
     } catch (error) {
+        console.error('Profile load error:', error);
         showNotification('Profil yüklenemedi', 'error');
         navigateTo('home');
     }
@@ -2044,6 +2123,86 @@ async function unblockUser(blockedId, username) {
             loadBlockedUsers(); // Listeyi yenile
         } else {
             showNotification(data.error || 'Engel kaldırılamadı', 'error');
+        }
+    } catch (error) {
+        showNotification('Bir hata oluştu', 'error');
+    }
+}
+
+// ── POST MENU (EDIT/DELETE) ──────────────────────────────────────────────
+
+function togglePostMenu(event, postId) {
+    event.stopPropagation();
+    const dropdown = document.getElementById(`post-menu-${postId}`);
+    
+    // Diğer açık menüleri kapat
+    document.querySelectorAll('.post-menu-dropdown').forEach(menu => {
+        if (menu.id !== `post-menu-${postId}`) {
+            menu.classList.remove('active');
+        }
+    });
+    
+    dropdown.classList.toggle('active');
+    
+    // Dışarı tıklandığında kapat
+    setTimeout(() => {
+        document.addEventListener('click', function closeMenu(e) {
+            if (!e.target.closest('.post-menu')) {
+                dropdown.classList.remove('active');
+                document.removeEventListener('click', closeMenu);
+            }
+        });
+    }, 100);
+}
+
+async function editPost(postId) {
+    const postTextEl = document.getElementById(`post-text-${postId}`);
+    if (!postTextEl) return;
+    
+    const currentText = postTextEl.textContent;
+    const newText = prompt('Kekliği düzenle:', currentText);
+    
+    if (!newText || newText.trim() === '' || newText === currentText) return;
+    
+    try {
+        const res = await fetch(`/api/posts/${postId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: currentUser.id, content: newText.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification('Keklik güncellendi', 'success');
+            postTextEl.innerHTML = formatPostText(newText.trim());
+        } else {
+            showNotification(data.error || 'Güncelleme başarısız', 'error');
+        }
+    } catch (error) {
+        showNotification('Bir hata oluştu', 'error');
+    }
+}
+
+async function deletePost(postId) {
+    if (!confirm('Bu kekliği silmek istediğinizden emin misiniz?')) return;
+    
+    try {
+        const res = await fetch(`/api/posts/${postId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: currentUser.id })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification('Keklik silindi', 'success');
+            // Postu DOM'dan kaldır
+            const postEl = document.querySelector(`[data-post-id="${postId}"]`);
+            if (postEl) postEl.remove();
+            
+            // Feed'i yenile
+            loadFeed();
+            loadTrendingPosts();
+        } else {
+            showNotification(data.error || 'Silme başarısız', 'error');
         }
     } catch (error) {
         showNotification('Bir hata oluştu', 'error');
