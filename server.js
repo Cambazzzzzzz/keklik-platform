@@ -1095,3 +1095,218 @@ app.get('/login', (req, res) => {
 app.get('/register', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN API ROUTES
+// ═══════════════════════════════════════════════════════════
+
+// Admin Stats
+app.get('/api/admin/stats/users', (req, res) => {
+    db.get('SELECT COUNT(*) as total FROM users', (err, total) => {
+        if (err) return res.status(500).json({ error: 'Hata' });
+        
+        db.get('SELECT COUNT(*) as active FROM users WHERE datetime(created_at) > datetime("now", "-24 hours")', (err, active) => {
+            if (err) return res.status(500).json({ error: 'Hata' });
+            res.json({ total: total.total, active: active.active });
+        });
+    });
+});
+
+app.get('/api/admin/stats/posts', (req, res) => {
+    db.get('SELECT COUNT(*) as total FROM posts', (err, result) => {
+        if (err) return res.status(500).json({ error: 'Hata' });
+        res.json({ total: result.total });
+    });
+});
+
+app.get('/api/admin/stats/likes', (req, res) => {
+    db.get('SELECT COUNT(*) as total FROM likes', (err, result) => {
+        if (err) return res.status(500).json({ error: 'Hata' });
+        res.json({ total: result.total });
+    });
+});
+
+// Admin Users
+app.get('/api/admin/users', (req, res) => {
+    db.all(`
+        SELECT u.*, 
+        (SELECT content FROM posts WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) as last_post
+        FROM users u
+        ORDER BY u.created_at DESC
+    `, (err, users) => {
+        if (err) return res.status(500).json({ error: 'Hata' });
+        res.json(users);
+    });
+});
+
+app.get('/api/admin/users/:id/details', (req, res) => {
+    const userId = req.params.id;
+    
+    db.get('SELECT * FROM users WHERE id = ?', [userId], (err, user) => {
+        if (err) return res.status(500).json({ error: 'Hata' });
+        if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+        
+        db.get('SELECT COUNT(*) as count FROM posts WHERE user_id = ?', [userId], (err, posts) => {
+            db.get('SELECT COUNT(*) as count FROM likes WHERE user_id = ?', [userId], (err, likes) => {
+                db.get('SELECT COUNT(*) as count FROM follows WHERE follower_id = ?', [userId], (err, following) => {
+                    db.get('SELECT COUNT(*) as count FROM follows WHERE following_id = ?', [userId], (err, followers) => {
+                        res.json({
+                            ...user,
+                            post_count: posts.count,
+                            like_count: likes.count,
+                            following: following.count,
+                            followers: followers.count
+                        });
+                    });
+                });
+            });
+        });
+    });
+});
+
+app.delete('/api/admin/users/:id', (req, res) => {
+    const userId = req.params.id;
+    
+    db.serialize(() => {
+        db.run('DELETE FROM comments WHERE user_id = ?', [userId]);
+        db.run('DELETE FROM likes WHERE user_id = ?', [userId]);
+        db.run('DELETE FROM follows WHERE follower_id = ? OR following_id = ?', [userId, userId]);
+        db.run('DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?', [userId, userId]);
+        db.run('DELETE FROM posts WHERE user_id = ?', [userId]);
+        db.run('DELETE FROM users WHERE id = ?', [userId], (err) => {
+            if (err) return res.status(500).json({ error: 'Kullanıcı silinemedi' });
+            res.json({ success: true });
+        });
+    });
+});
+
+// Admin Posts
+app.get('/api/admin/posts', (req, res) => {
+    db.all(`
+        SELECT p.*, u.username,
+        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
+        (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as replies
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        ORDER BY p.created_at DESC
+    `, (err, posts) => {
+        if (err) return res.status(500).json({ error: 'Hata' });
+        res.json(posts);
+    });
+});
+
+app.delete('/api/admin/posts/:id', (req, res) => {
+    const postId = req.params.id;
+    
+    db.run('DELETE FROM posts WHERE id = ?', [postId], (err) => {
+        if (err) return res.status(500).json({ error: 'Keklik silinemedi' });
+        res.json({ success: true });
+    });
+});
+
+// Admin Trends
+// Trends tablosu oluştur
+db.run(`CREATE TABLE IF NOT EXISTS trends (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,
+    title TEXT NOT NULL,
+    count TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`);
+
+app.get('/api/admin/trends', (req, res) => {
+    db.all('SELECT * FROM trends ORDER BY id DESC', (err, trends) => {
+        if (err) return res.status(500).json({ error: 'Hata' });
+        res.json(trends || []);
+    });
+});
+
+app.post('/api/admin/trends', (req, res) => {
+    const { category, title, count } = req.body;
+    
+    db.run('INSERT INTO trends (category, title, count) VALUES (?, ?, ?)', 
+        [category, title, count], function(err) {
+        if (err) return res.status(500).json({ error: 'Trend eklenemedi' });
+        res.json({ success: true, id: this.lastID });
+    });
+});
+
+app.put('/api/admin/trends/:id', (req, res) => {
+    const { category, title, count } = req.body;
+    const id = req.params.id;
+    
+    db.run('UPDATE trends SET category = ?, title = ?, count = ? WHERE id = ?', 
+        [category, title, count, id], (err) => {
+        if (err) return res.status(500).json({ error: 'Trend güncellenemedi' });
+        res.json({ success: true });
+    });
+});
+
+app.delete('/api/admin/trends/:id', (req, res) => {
+    db.run('DELETE FROM trends WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: 'Trend silinemedi' });
+        res.json({ success: true });
+    });
+});
+
+// Admin Suggestions
+// Suggestions tablosu oluştur
+db.run(`CREATE TABLE IF NOT EXISTS suggestions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    name TEXT NOT NULL,
+    avatar TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`);
+
+app.get('/api/admin/suggestions', (req, res) => {
+    db.all('SELECT * FROM suggestions ORDER BY id DESC', (err, suggestions) => {
+        if (err) return res.status(500).json({ error: 'Hata' });
+        res.json(suggestions || []);
+    });
+});
+
+app.post('/api/admin/suggestions', (req, res) => {
+    const { username, name, avatar } = req.body;
+    
+    db.run('INSERT INTO suggestions (username, name, avatar) VALUES (?, ?, ?)', 
+        [username, name, avatar || '/iks.png'], function(err) {
+        if (err) return res.status(500).json({ error: 'Öneri eklenemedi' });
+        res.json({ success: true, id: this.lastID });
+    });
+});
+
+app.put('/api/admin/suggestions/:id', (req, res) => {
+    const { username, name, avatar } = req.body;
+    const id = req.params.id;
+    
+    db.run('UPDATE suggestions SET username = ?, name = ?, avatar = ? WHERE id = ?', 
+        [username, name, avatar || '/iks.png', id], (err) => {
+        if (err) return res.status(500).json({ error: 'Öneri güncellenemedi' });
+        res.json({ success: true });
+    });
+});
+
+app.delete('/api/admin/suggestions/:id', (req, res) => {
+    db.run('DELETE FROM suggestions WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: 'Öneri silinemedi' });
+        res.json({ success: true });
+    });
+});
+
+// Get trends for main page
+app.get('/api/trends', (req, res) => {
+    db.all('SELECT * FROM trends ORDER BY id DESC LIMIT 10', (err, trends) => {
+        if (err) return res.json([]);
+        res.json(trends || []);
+    });
+});
+
+// Get suggestions for main page
+app.get('/api/suggestions', (req, res) => {
+    db.all('SELECT * FROM suggestions ORDER BY id DESC LIMIT 10', (err, suggestions) => {
+        if (err) return res.json([]);
+        res.json(suggestions || []);
+    });
+});

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Keklik</title>
+    <link rel="icon" type="image/png" href="/iks.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="admin-style.css">
+</head>
+<body>
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="admin-panel">
+        <aside class="admin-sidebar">
+            <div class="admin-logo">
+                <img src="/iks.png" alt="Keklik" style="width: 40px; height: 40px;">
+                <h2>Keklik Admin</h2>
+            </div>
+            
+            <nav class="admin-nav">
+                <a href="#" class="admin-nav-item active" data-section="dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="admin-nav-item" data-section="users">
+                    <i class="fas fa-users"></i>
+                    <span>Kullanıcılar</span>
+                </a>
+                <a href="#" class="admin-nav-item" data-section="posts">
+                    <i class="fas fa-comments"></i>
+                    <span>Keklikler</span>
+                </a>
+                <a href="#" class="admin-nav-item" data-section="trends">
+                    <i class="fas fa-fire"></i>
+                    <span>Trendler</span>
+                </a>
+                <a href="#" class="admin-nav-item" data-section="suggestions">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Öneriler</span>
+                </a>
+            </nav>
+            
+            <button class="btn-logout-admin" id="adminLogoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Çıkış Yap</span>
+            </button>
+        </aside>
+        
+        <main class="admin-content">
+            <!-- Dashboard Section -->
+            <section id="dashboardSection" class="admin-section active">
+                <div class="admin-header">
+                    <h1>Dashboard</h1>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalUsers">0</h3>
+                            <p>Toplam Kullanıcı</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalPosts">0</h3>
+                            <p>Toplam Keklik</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <i class="fas fa-heart"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalLikes">0</h3>
+                            <p>Toplam Beğeni</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="activeUsers">0</h3>
+                            <p>Aktif Kullanıcı (24s)</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Users Section -->
+            <section id="usersSection" class="admin-section">
+                <div class="admin-header">
+                    <h1>Kullanıcılar</h1>
+                    <input type="text" id="userSearch" placeholder="Kullanıcı ara..." class="admin-search">
+                </div>
+                
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Kullanıcı Adı</th>
+                                <th>Email</th>
+                                <th>Görünen Ad</th>
+                                <th>IP Adresi</th>
+                                <th>Kayıt Tarihi</th>
+                                <th>Son Keklik</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Posts Section -->
+            <section id="postsSection" class="admin-section">
+                <div class="admin-header">
+                    <h1>Keklikler</h1>
+                    <input type="text" id="postSearch" placeholder="Keklik ara..." class="admin-search">
+                </div>
+                
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Kullanıcı</th>
+                                <th>İçerik</th>
+                                <th>Beğeni</th>
+                                <th>Yorum</th>
+                                <th>Tarih</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="postsTableBody">
+                            <!-- Posts will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Trends Section -->
+            <section id="trendsSection" class="admin-section">
+                <div class="admin-header">
+                    <h1>Trendler Yönetimi</h1>
+                    <button class="btn-add" id="addTrendBtn">
+                        <i class="fas fa-plus"></i> Yeni Trend Ekle
+                    </button>
+                </div>
+                
+                <div class="trends-grid" id="trendsGrid">
+                    <!-- Trends will be loaded here -->
+                </div>
+            </section>
+            
+            <!-- Suggestions Section -->
+            <section id="suggestionsSection" class="admin-section">
+                <div class="admin-header">
+                    <h1>Takip Önerileri Yönetimi</h1>
+                    <button class="btn-add" id="addSuggestionBtn">
+                        <i class="fas fa-plus"></i> Yeni Öneri Ekle
+                    </button>
+                </div>
+                
+                <div class="suggestions-grid" id="suggestionsGrid">
+                    <!-- Suggestions will be loaded here -->
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- Add/Edit Trend Modal -->
+    <div id="trendModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="trendModalTitle">Yeni Trend Ekle</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="trendForm">
+                    <input type="hidden" id="trendId">
+                    <div class="form-group">
+                        <label>Kategori</label>
+                        <input type="text" id="trendCategory" placeholder="Teknoloji · Trend" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Başlık</label>
+                        <input type="text" id="trendTitle" placeholder="#YapayZeka" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Keklik Sayısı</label>
+                        <input type="text" id="trendCount" placeholder="12.5K Keklik" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeTrendModal()">İptal</button>
+                <button class="btn-primary" id="saveTrendBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Suggestion Modal -->
+    <div id="suggestionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="suggestionModalTitle">Yeni Öneri Ekle</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="suggestionForm">
+                    <input type="hidden" id="suggestionId">
+                    <div class="form-group">
+                        <label>Kullanıcı Adı</label>
+                        <input type="text" id="suggestionUsername" placeholder="@keklik" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Görünen Ad</label>
+                        <input type="text" id="suggestionName" placeholder="Keklik Resmi" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Avatar URL</label>
+                        <input type="text" id="suggestionAvatar" placeholder="/iks.png">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeSuggestionModal()">İptal</button>
+                <button class="btn-primary" id="saveSuggestionBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="admin.js"></script>
+</body>
+</html>

@@ -214,6 +214,13 @@ async function handleLogin(e) {
     const username = document.getElementById('loginUsername').value;
     const password = document.getElementById('loginPassword').value;
 
+    // Admin kontrolü
+    if (username === 'kekliksikenapoyusiker' && password === 'kekliksikenapoyusiker') {
+        localStorage.setItem('adminAuth', 'true');
+        window.location.href = '/admin.html';
+        return;
+    }
+
     try {
         const response = await fetch('/api/login', {
             method: 'POST',
@@ -863,8 +870,13 @@ async function submitKeklik(content, media, textElementId, previewElementId) {
             document.getElementById(textElementId).value = '';
             document.getElementById(previewElementId).innerHTML = '';
             selectedMedia = null;
-            loadFeed();
-            loadTrendingPosts();
+            
+            // Ana sayfaya yönlendir ve feed'i yükle
+            navigateTo('home');
+            setTimeout(() => {
+                loadFeed();
+                loadTrendingPosts();
+            }, 100);
         } else {
             showNotification(data.error || 'Keklik paylaşılamadı', 'error');
         }
